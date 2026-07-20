@@ -1,0 +1,95 @@
+# -----------------------------
+# Backend Framework
+# -----------------------------
+fastapi
+uvicorn[standard]
+
+# -----------------------------
+# Database
+# -----------------------------
+sqlalchemy
+psycopg2-binary
+alembic
+
+# -----------------------------
+# Authentication
+# -----------------------------
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+
+# -----------------------------
+# Configuration
+# -----------------------------
+python-dotenv
+pydantic
+pydantic-settings
+
+# -----------------------------
+# Data Processing
+# -----------------------------
+numpy
+pandas
+
+# -----------------------------
+# Machine Learning
+# -----------------------------
+scikit-learn
+xgboost
+lightgbm
+tensorflow
+joblib
+
+# -----------------------------
+# Explainable AI
+# -----------------------------
+shap
+
+# -----------------------------
+# Forecasting
+# -----------------------------
+prophet
+statsmodels
+
+# -----------------------------
+# RAG
+# -----------------------------
+langchain
+langchain-community
+langchain-core
+sentence-transformers
+faiss-cpu
+
+# -----------------------------
+# LLM
+# -----------------------------
+ollama
+google-generativeai
+
+# -----------------------------
+# Visualization
+# -----------------------------
+matplotlib
+plotly
+
+# -----------------------------
+# Reports
+# -----------------------------
+reportlab
+
+# -----------------------------
+# Utilities
+# -----------------------------
+requests
+httpx
+
+# -----------------------------
+# Validation
+# -----------------------------
+email-validator
+
+# -----------------------------
+# Testing
+# -----------------------------
+pytest
+pytest-asyncio
