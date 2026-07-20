@@ -1,0 +1,7 @@
+APP_NAME = "SmartCattle Net"
+
+API_VERSION = "v1"
+
+MODEL_VERSION = "1.0"
+
+TOTAL_STAGES = 12
