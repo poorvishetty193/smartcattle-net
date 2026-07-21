@@ -20,7 +20,7 @@ SmartCattle Net provides an end-to-end intelligent dairy management ecosystem wi
 - 📄 Automated Report Generation
 - 👨‍⚕ Vet Recommendation System
 - 🌍 Farmer Community Platform
-- 🛒 Marketplace (Future Scope)
+- 🛒 Marketplace
 
 ---
 
