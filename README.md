@@ -226,6 +226,7 @@ cd smartcattle-net
 
 ```bash
 cd frontend
+npm install
 ```
 
 ---
