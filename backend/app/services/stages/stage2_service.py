@@ -2,42 +2,7 @@
 SmartCattle Net
 services/stages/stage2_service.py
 
-Purpose
--------
-Stage 2 of the CCP-Chain: Milk Drop Prediction.
-
-Algorithm : LightGBM Classifier
-Model file: ai/models/stage2/model_s2_lgbm_drop.pkl
-Threshold : ai/models/stage2/model_s2_threshold.pkl
-
-Input features (notebook cell 17, in order)
---------------------------------------------
-FEATURE_COLS (15 base features) + ['s1_daily_yield_pred']
-
-Total: 16 features
-
-FEATURE_COLS (exact order from notebook cell 13):
-  DIM, parity, log_scc, thi, thi_stress_flag,
-  yield_lag_1, yield_lag_2, yield_lag_3, yield_lag_7,
-  yield_roll_7_mean, yield_roll_7_std, yield_cv_7,
-  month, season, mastitis_risk_proxy
-
-Outputs
--------
-- s2_drop_probability : float  — probability of a milk drop event (0–1)
-- s2_drop_flag        : int    — 1 if prob >= optimised threshold, else 0
-
-Chain dependency
-----------------
-Requires Stage 1 output (s1_daily_yield_pred) as an input feature,
-exactly as in notebook cell 17.
-
-Dependencies
-------------
-- app.services.loaders.model_loader  (model_loader singleton)
-- app.utils.helpers                  (safe_float, BASE_FEATURE_COLS)
-- app.utils.logger
-- numpy
+Stage 2 : Milk Drop Prediction
 """
 
 from __future__ import annotations
@@ -52,152 +17,139 @@ from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-# ---------------------------------------------------------------------------
-# Stage 2 feature list — mirrors notebook cell 17 exactly
-# FEATURE_COLS + ['s1_daily_yield_pred']
-# ---------------------------------------------------------------------------
-
-S2_FEATURES: list[str] = BASE_FEATURE_COLS + ["s1_daily_yield_pred"]
+S2_FEATURES = BASE_FEATURE_COLS + ["s1_daily_yield_pred"]
 
 
 class Stage2Service:
     """
     Stage 2: Milk Drop Prediction using LightGBM.
-
-    Predicts whether the cow's next milking session will show a
-    significant milk yield drop, and returns the calibrated probability.
-
-    The optimised classification threshold is loaded from disk
-    (``model_s2_threshold.pkl``) so inference matches the exact operating
-    point chosen during training.
-
-    Attributes
-    ----------
-    model : LGBMClassifier
-        Loaded LightGBM classifier.
-    threshold : float
-        Optimised decision threshold (default 0.5 if not found on disk).
     """
 
     def __init__(self) -> None:
         self.model = model_loader.get("stage2")
-        self.threshold: float = self._load_threshold()
+        self.threshold = self._load_threshold()
+
         logger.info(
-            "Stage2Service initialised — threshold=%.4f", self.threshold
+            "Stage2Service initialised — threshold=%.4f",
+            self.threshold,
         )
 
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
-
+    # ------------------------------------------------------------
+    # Load threshold
+    # ------------------------------------------------------------
     def _load_threshold(self) -> float:
-        """
-        Load the optimised classification threshold from disk.
 
-        Falls back to 0.5 if the threshold artifact is not present.
-
-        Returns
-        -------
-        float
-            Decision threshold in the range (0, 1).
-        """
         raw = model_loader.get("stage2_threshold")
+
         if raw is None:
             logger.warning(
-                "stage2_threshold not found in model_loader — using default 0.5"
+                "stage2_threshold not found. Using default threshold 0.5"
             )
             return 0.5
-        # The threshold is saved as a plain Python float via joblib
-        return float(raw)
 
+        # Already numeric
+        if isinstance(raw, (int, float)):
+            return float(raw)
+
+        # Dictionary
+        if isinstance(raw, dict):
+
+            possible_keys = [
+                "threshold",
+                "best_threshold",
+                "optimal_threshold",
+                "decision_threshold",
+                "value",
+            ]
+
+            for key in possible_keys:
+                if key in raw:
+                    logger.info(
+                        "Loaded threshold from key '%s' = %s",
+                        key,
+                        raw[key],
+                    )
+                    return float(raw[key])
+
+            # If dictionary has only one value
+            if len(raw) == 1:
+                value = list(raw.values())[0]
+                logger.info(
+                    "Loaded threshold from dictionary value = %s",
+                    value,
+                )
+                return float(value)
+
+            logger.warning(
+                "Unknown threshold dictionary %s. Using default 0.5",
+                raw,
+            )
+            return 0.5
+
+        # List or tuple
+        if isinstance(raw, (list, tuple)):
+            return float(raw[0])
+
+        logger.warning(
+            "Unsupported threshold type %s. Using default 0.5",
+            type(raw).__name__,
+        )
+        return 0.5
+
+    # ------------------------------------------------------------
+    # Build feature vector
+    # ------------------------------------------------------------
     def _build_feature_vector(
         self,
         features: Dict[str, Union[int, float, None]],
         s1_daily_yield_pred: float,
     ) -> np.ndarray:
-        """
-        Assemble the 16-feature input vector for the LightGBM model.
 
-        Feature order (notebook cell 17):
-        FEATURE_COLS (15) + [s1_daily_yield_pred]
-
-        Parameters
-        ----------
-        features : dict
-            Mapping of feature name → value for the 15 base features.
-        s1_daily_yield_pred : float
-            Stage 1 predicted daily milk yield (litres).
-
-        Returns
-        -------
-        np.ndarray
-            Shape ``(1, 16)`` float32 array ready for model inference.
-        """
-        row: list[float] = [
+        row = [
             safe_float(features.get(col), default=0.0)
             for col in BASE_FEATURE_COLS
         ]
+
         row.append(safe_float(s1_daily_yield_pred))
 
         return np.array(row, dtype=np.float32).reshape(1, -1)
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
+    # ------------------------------------------------------------
+    # Prediction
+    # ------------------------------------------------------------
     def predict(
         self,
         features: Dict[str, Union[int, float, None]],
         s1_daily_yield_pred: float,
     ) -> Dict[str, Union[float, int]]:
-        """
-        Run Stage 2 inference and return drop probability and binary flag.
 
-        Parameters
-        ----------
-        features : dict
-            Dictionary containing the 15 base ``FEATURE_COLS`` values.
-            Keys must match the names in ``BASE_FEATURE_COLS``.
-        s1_daily_yield_pred : float
-            Stage 1 predicted daily milk yield (litres) — chained input.
-
-        Returns
-        -------
-        dict with keys:
-            - ``s2_drop_probability`` (float): probability of milk drop, 0–1
-            - ``s2_drop_flag``        (int):   1 = drop predicted, 0 = normal
-
-        Raises
-        ------
-        RuntimeError
-            If the Stage 2 model is not loaded.
-        """
         if self.model is None:
             raise RuntimeError(
-                "Stage 2 model (LightGBM) is not loaded. "
-                "Check ai/models/stage2/model_s2_lgbm_drop.pkl."
+                "Stage 2 model is not loaded."
             )
 
-        X = self._build_feature_vector(features, s1_daily_yield_pred)
+        X = self._build_feature_vector(
+            features,
+            s1_daily_yield_pred,
+        )
 
-        # LightGBM classifier: predict_proba returns shape (n_samples, 2)
-        # Column 1 = probability of class 1 (drop event)
-        proba: float = float(self.model.predict_proba(X)[0, 1])
-        flag: int = 1 if proba >= self.threshold else 0
+        probability = float(
+            self.model.predict_proba(X)[0, 1]
+        )
+
+        flag = 1 if probability >= self.threshold else 0
 
         logger.debug(
-            "Stage2 — drop_probability=%.4f drop_flag=%d threshold=%.4f",
-            proba, flag, self.threshold,
+            "Stage2 probability=%.4f threshold=%.4f flag=%d",
+            probability,
+            self.threshold,
+            flag,
         )
 
         return {
-            "s2_drop_probability": proba,
+            "s2_drop_probability": probability,
             "s2_drop_flag": flag,
         }
 
-
-# ---------------------------------------------------------------------------
-# Singleton instance — imported by the prediction pipeline
-# ---------------------------------------------------------------------------
 
 stage2_service = Stage2Service()
