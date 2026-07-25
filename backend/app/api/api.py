@@ -12,9 +12,10 @@ that the main FastAPI application can mount.
 
 from fastapi import APIRouter
 
-from app.api.routers import auth, cows, predictions, system
+from app.api.routers import auth, cows, predictions, system,dashboard
 
 api_router = APIRouter()
+api_router.include_router(dashboard.router)
 
 # Attach individual routers
 api_router.include_router(auth.router)
