@@ -3,24 +3,53 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    console.log({
-      email,
-      password,
-      rememberMe,
-    });
+    try {
+      const form = new URLSearchParams();
 
-    // TODO:
-    // Call backend login API
+      form.append("grant_type", "password");
+      form.append("username", email);
+      form.append("password", password);
+      form.append("scope", "");
+      form.append("client_id", "");
+      form.append("client_secret", "");
+
+      const response = await fetch("http://127.0.0.1:8000/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: form.toString(),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.detail || "Login failed");
+        return;
+      }
+
+      // Save JWT
+      localStorage.setItem("token", data.access_token);
+
+      alert("Login Successful!");
+
+      router.push("/dashboard");
+    } catch (error) {
+      console.error(error);
+      alert("Unable to connect to backend.");
+    }
   };
 
   return (
