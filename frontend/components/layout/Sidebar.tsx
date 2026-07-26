@@ -9,6 +9,7 @@ import {
   Bot,
   FileText,
   Settings,
+  Brain,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -47,6 +48,13 @@ export default function Sidebar() {
           className="w-11 h-11 rounded-xl text-gray-500 hover:bg-gray-100 flex items-center justify-center"
         >
           <TrendingUp size={22} />
+        </Link>
+
+        <Link
+          href="/dashboard/predictions"
+          className="w-11 h-11 rounded-xl text-gray-500 hover:bg-gray-100 flex items-center justify-center"
+        >
+          <Brain size={22} />
         </Link>
 
         <Link
