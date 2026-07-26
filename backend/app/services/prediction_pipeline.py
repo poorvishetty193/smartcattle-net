@@ -210,21 +210,29 @@ class PredictionPipeline:
         # --------------------------------------------------------------
 
         # Combine all dicts into one master payload
-        master_payload: Dict[str, Union[float, int, str]] = {
-            "cow_id": cow_label,
-            **s1,
-            **s2,
-            **s3,
-            **s4,
-            **s5,
-            **s6,
-            **s7,
-            **s8,
-            **s9,
-            **s10,
-            **s11,
-            **s12,
-        }
+        master_payload = {
+    "cow_id": cow_label,
+
+    "stage1_daily_yield": s1["s1_daily_yield_pred"],
+    "stage2_drop_probability": s2["s2_drop_probability"],
+    "stage3_next_milking": s3["s3_next_milking_yield"],
+    "stage4_msi": s4["s4_msi"],
+    "stage5_quantity": s5["s5_milk_quantity"],
+
+    "stage6_forecast": s6,
+
+    "stage7_productivity_score": s7["s7_productivity_score"],
+
+    "stage8_stress_probability": s8["s8_stress_probability"],
+
+    "stage9_recommendation": s9["s9_farm_decision"],
+
+    "stage10_priority_rank": int(s10["s10_priority_score"]),
+
+    "stage11_health_score": s11["s11_health_score"],
+
+    "stage12_risk_level": s12["s12_risk_level"],
+}
 
         # Validate with Pydantic
         response_model = PredictionResponse(**master_payload)  # type: ignore

@@ -15,6 +15,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.api import api_router
 from app.core.config import settings
+from app.database.base import Base
+from app.database.models import User, Cow, PredictionRecord
+from app.database.session import engine
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -28,7 +31,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     logger.info("Starting SmartCattle Net API...")
 
-    # Models are automatically loaded when model_loader is imported
+    # Create all database tables if they don't exist
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    logger.info("Database tables created successfully.")
     logger.info("SmartCattle services initialized successfully.")
 
     yield
@@ -46,7 +53,10 @@ app = FastAPI(
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change this in production
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

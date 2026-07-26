@@ -15,6 +15,8 @@ from app.database.models import PredictionRecord
 from app.schemas.dashboard import (
     OverviewResponse,
     StatisticsResponse,
+    HeatmapItem,
+    HeatmapResponse,
 )
 
 
@@ -74,4 +76,41 @@ class DashboardService:
             at_risk_cows=at_risk_cows or 0,
             avg_health_score=round(float(avg_health_score or 0), 2),
             stress_alerts=stress_alerts or 0,
+        )
+
+    @staticmethod
+    async def get_productivity_heatmap(
+        db,
+        current_user,
+    ) -> HeatmapResponse:
+        """
+        Returns productivity scores of all cows.
+        """
+
+        stmt = (
+            select(
+                PredictionRecord.cow_label,
+               PredictionRecord.stage7_productivity,
+            )
+            .where(PredictionRecord.user_id == current_user.id)
+            .order_by(PredictionRecord.cow_label)
+        )
+
+        result = await db.execute(stmt)
+
+        rows = result.all()
+
+        heatmap = [
+            HeatmapItem(
+                cow_id=row.cow_label,
+                productivity_score=round(
+    float(row.stage7_productivity or 0),
+    2,
+),
+            )
+            for row in rows
+        ]
+
+        return HeatmapResponse(
+            heatmap=heatmap
         )

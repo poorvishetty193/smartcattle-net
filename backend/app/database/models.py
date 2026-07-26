@@ -48,6 +48,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -96,7 +97,7 @@ class User(TimestampMixin, Base):
         UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
-        server_default="gen_random_uuid()",
+        server_default=text("gen_random_uuid()"),
         doc="Unique user identifier.",
     )
     email: Mapped[str] = mapped_column(
@@ -189,12 +190,12 @@ class Cow(TimestampMixin, Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-        server_default="gen_random_uuid()",
-        doc="Unique cow record identifier.",
-    )
+    UUID(as_uuid=True),
+    primary_key=True,
+    default=uuid.uuid4,
+    server_default=text("gen_random_uuid()"),
+    doc="Unique user identifier.",
+)
     cow_id: Mapped[str] = mapped_column(
         String(64),
         nullable=False,
@@ -295,12 +296,12 @@ class PredictionRecord(TimestampMixin, Base):
     __tablename__ = "prediction_records"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-        server_default="gen_random_uuid()",
-        doc="Unique prediction record identifier.",
-    )
+    UUID(as_uuid=True),
+    primary_key=True,
+    default=uuid.uuid4,
+    server_default=text("gen_random_uuid()"),
+    doc="Unique cow record identifier.",
+)
 
     # ---------- Foreign keys --------------------------------------------------
     user_id: Mapped[uuid.UUID] = mapped_column(

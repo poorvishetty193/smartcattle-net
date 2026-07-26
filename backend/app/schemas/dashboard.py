@@ -10,7 +10,15 @@ Pydantic response schemas for Dashboard APIs.
 from datetime import datetime
 
 from pydantic import BaseModel
+from pydantic import BaseModel
 
+class HeatmapItem(BaseModel):
+    cow_id: str
+    productivity_score: float
+
+
+class HeatmapResponse(BaseModel):
+    heatmap: list[HeatmapItem]
 
 class OverviewResponse(BaseModel):
     """
