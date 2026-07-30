@@ -58,7 +58,7 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 _RAW_URL: str = settings.DATABASE_URL
-
+print("DATABASE_URL =", repr(_RAW_URL))
 
 def _normalise_db_url(url: str) -> str:
     """
@@ -175,11 +175,11 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     """
-    Create all database tables defined in ``Base.metadata`` if they do
+    Create all databasFe tables defined in ``Base.metadata`` if they do
     not already exist.
 
     This is a convenience method for development and first-run deployment.
-    In production, use Alembic migrations instead of calling this directly.
+    In production, use Alembic migrations Finstead of calling this directly.
 
     Called from the FastAPI lifespan context in ``main.py``.
     """

@@ -24,19 +24,34 @@ class Stage1Service:
         """
         Parameters
         ----------
-        features : list | numpy.ndarray
+        features : dict
+            Dictionary containing the Stage 1 input features.
 
         Returns
         -------
-        float
-            Predicted daily milk yield.
+        dict
+            {
+                "s1_daily_yield_pred": float
+            }
         """
 
-        features = np.array(features).reshape(1, -1)
+        if not isinstance(features, dict):
+            raise TypeError(
+                f"Expected features to be dict, got {type(features).__name__}"
+            )
 
-        prediction = self.model.predict(features)
+        # Convert dictionary values into a feature vector
+        feature_vector = list(features.values())
 
-        return float(prediction[0])
+        # Convert to NumPy array with shape (1, n_features)
+        X = np.array(feature_vector, dtype=float).reshape(1, -1)
+
+        # Predict
+        prediction = self.model.predict(X)
+
+        return {
+            "s1_daily_yield_pred": float(prediction[0])
+        }
 
 
 # Singleton instance

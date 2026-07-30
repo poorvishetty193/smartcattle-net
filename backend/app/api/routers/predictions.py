@@ -50,9 +50,9 @@ async def create_prediction(
     cow_uuid = None
     if request_in.cow_id:
         stmt = select(Cow).where(
-            Cow.user_id == current_user.id, 
-            Cow.label == request_in.cow_id
-        )
+    Cow.owner_id == current_user.id,
+    Cow.cow_id == request_in.cow_id
+)
         result = await db.execute(stmt)
         cow_obj = result.scalar_one_or_none()
         if cow_obj:
