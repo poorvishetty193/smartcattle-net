@@ -374,4 +374,45 @@ class DashboardService:
 
         return AlertResponse(
             alerts=alerts
-        )        
+        ) 
+from sqlalchemy import select, func
+
+from app.database.models import Cow
+from app.schemas.dashboard import DashboardSummaryResponse
+
+
+class DashboardService:
+
+    @staticmethod
+    async def get_summary(db, current_user):
+
+        total_stmt = select(func.count()).where(
+            Cow.owner_id == current_user.id
+        )
+
+        total = await db.scalar(total_stmt)
+
+        active_stmt = select(func.count()).where(
+            Cow.owner_id == current_user.id,
+            Cow.is_active == True,
+        )
+
+        active = await db.scalar(active_stmt)
+
+        inactive = total - active
+
+        avg_stmt = select(
+            func.avg(Cow.days_in_milk)
+        ).where(
+            Cow.owner_id == current_user.id,
+            Cow.is_active == True,
+        )
+
+        average = await db.scalar(avg_stmt)
+
+        return DashboardSummaryResponse(
+            total_cows=total or 0,
+            active_cows=active or 0,
+            inactive_cows=inactive or 0,
+            average_days_in_milk=round(average or 0, 2),
+        )               

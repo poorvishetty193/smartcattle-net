@@ -19,6 +19,7 @@ from app.schemas.dashboard import (
     HealthRiskResponse,
     MilkYieldTrendResponse,
     AlertResponse,
+    DashboardSummaryResponse,
 )
 
 from app.services.dashboard_service import DashboardService
@@ -137,3 +138,16 @@ async def get_alerts(
         db=db,
         current_user=current_user,
     )    
+@router.get(
+    "/summary",
+    response_model=DashboardSummaryResponse,
+    summary="Dashboard Summary",
+)
+async def dashboard_summary(
+    db: SessionDep,
+    current_user: CurrentUser,
+):
+    return await DashboardService.get_summary(
+        db=db,
+        current_user=current_user,
+    )

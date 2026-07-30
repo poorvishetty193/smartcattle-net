@@ -80,3 +80,11 @@ class StatisticsResponse(BaseModel):
 
     class Config:
         from_attributes = True        
+from pydantic import BaseModel
+
+
+class DashboardSummaryResponse(BaseModel):
+    total_cows: int
+    active_cows: int
+    inactive_cows: int
+    average_days_in_milk: float        
