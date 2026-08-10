@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { apiGet } from "@/lib/api";
 import {
   Droplets,
   TriangleAlert,
@@ -9,10 +11,34 @@ import {
 } from "lucide-react";
 
 export default function Statistics() {
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStatistics();
+  }, []);
+
+  const fetchStatistics = async () => {
+    try {
+      const data = await apiGet("/dashboard/statistics");
+
+      console.log("Statistics Response:", data);
+
+      setStats(data);
+    } catch (error) {
+      console.error("Statistics Error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <p>Loading...</p>;
+  }
+
   return (
     <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-      {/* Card 1 */}
-
+      {/* Avg Daily Yield */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-lg transition">
         <div className="flex justify-between items-start">
           <span className="text-sm font-semibold text-gray-500">
@@ -23,18 +49,18 @@ export default function Statistics() {
         </div>
 
         <div className="mt-5 flex items-end gap-2">
-          <h2 className="text-4xl font-bold text-gray-800">28.4L</h2>
+          <h2 className="text-4xl font-bold text-gray-800">
+            {stats?.avg_daily_yield}L
+          </h2>
 
           <div className="flex items-center text-green-600 text-sm font-semibold">
             <TrendingUp size={16} />
-
-            <span>+1.2%</span>
+            <span>Live</span>
           </div>
         </div>
       </div>
 
-      {/* Card 2 */}
-
+      {/* At Risk Cows */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-lg transition">
         <div className="flex justify-between items-start">
           <span className="text-sm font-semibold text-gray-500">
@@ -45,7 +71,9 @@ export default function Statistics() {
         </div>
 
         <div className="mt-5">
-          <h2 className="text-4xl font-bold text-red-500">5</h2>
+          <h2 className="text-4xl font-bold text-red-500">
+            {stats?.at_risk_cows}
+          </h2>
 
           <p className="mt-2 text-sm font-medium text-red-500">
             Requires Immediate Attention
@@ -53,8 +81,7 @@ export default function Statistics() {
         </div>
       </div>
 
-      {/* Card 3 */}
-
+      {/* Avg Health Score */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-lg transition">
         <div className="flex justify-between items-start">
           <span className="text-sm font-semibold text-gray-500">
@@ -65,14 +92,15 @@ export default function Statistics() {
         </div>
 
         <div className="mt-5">
-          <h2 className="text-4xl font-bold text-gray-800">74</h2>
+          <h2 className="text-4xl font-bold text-gray-800">
+            {stats?.avg_health_score}
+          </h2>
 
           <p className="mt-2 text-sm text-gray-500">Out of 100</p>
         </div>
       </div>
 
-      {/* Card 4 */}
-
+      {/* Stress Alerts */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-lg transition">
         <div className="flex justify-between items-start">
           <span className="text-sm font-semibold text-gray-500">
@@ -83,9 +111,13 @@ export default function Statistics() {
         </div>
 
         <div className="mt-5">
-          <h2 className="text-4xl font-bold text-amber-500">3</h2>
+          <h2 className="text-4xl font-bold text-amber-500">
+            {stats?.stress_alerts}
+          </h2>
 
-          <p className="mt-2 text-sm font-medium text-amber-500">Amber Alert</p>
+          <p className="mt-2 text-sm font-medium text-amber-500">
+            Active Alerts
+          </p>
         </div>
       </div>
     </section>

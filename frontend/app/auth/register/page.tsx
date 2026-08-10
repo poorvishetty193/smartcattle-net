@@ -1,5 +1,6 @@
 "use client";
-
+import { apiPost } from "@/lib/api";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -29,16 +31,39 @@ export default function RegisterPage() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+   e.preventDefault();
 
-    if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match");
-      return;
-    }
+   if (formData.password !== formData.confirmPassword) {
+     alert("Passwords do not match");
+     return;
+   }
 
-    console.log(formData);
-  };
+   try {
+     const data = await apiPost("/auth/signup", {
+       name: formData.fullName,
+       email: formData.email,
+       password: formData.password,
+     });
+
+     console.log(data);
+
+     alert("Registration Successful!");
+
+     router.push("/auth/login");
+   } catch (error: any) {
+  console.error("Registration Error:", error);
+
+  if (error?.response?.data) {
+    console.log(error.response.data);
+    alert(JSON.stringify(error.response.data));
+  } else if (error?.message) {
+    alert(error.message);
+  } else {
+    alert("Registration Failed");
+  }
+}
+ };
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-green-100 via-white to-green-50 flex">

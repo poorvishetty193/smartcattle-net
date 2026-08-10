@@ -1,31 +1,67 @@
 const API_URL = "http://127.0.0.1:8000";
 
-export async function predict(data: any, token: string) {
-  const response = await fetch(`${API_URL}/predict`, {
-    method: "POST",
+function getToken() {
+  return localStorage.getItem("token");
+}
+
+export async function apiGet(endpoint: string) {
+  const response = await fetch(`${API_URL}${endpoint}`, {
     headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${getToken()}`,
     },
-    body: JSON.stringify(data),
   });
 
   if (!response.ok) {
-    throw new Error("Prediction failed");
+    throw new Error(await response.text());
   }
 
   return response.json();
 }
 
-export async function getPredictionHistory(cowId: string, token: string) {
-  const response = await fetch(`${API_URL}/predict/history?cow_id=${cowId}`, {
+export async function apiPost(endpoint: string, body: any) {
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    method: "POST",
     headers: {
-      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getToken()}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+
+  return response.json();
+}
+
+export async function apiPut(endpoint: string, body: any) {
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getToken()}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+
+  return response.json();
+}
+
+export async function apiDelete(endpoint: string) {
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${getToken()}`,
     },
   });
 
   if (!response.ok) {
-    throw new Error("History fetch failed");
+    throw new Error(await response.text());
   }
 
   return response.json();

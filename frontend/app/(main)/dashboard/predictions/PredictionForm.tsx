@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+ import { apiPost } from "@/lib/api";
 
 interface PredictionFormProps {
   setResult: React.Dispatch<React.SetStateAction<any>>;
@@ -36,27 +37,9 @@ export default function PredictionForm({ setResult }: PredictionFormProps) {
    try {
      setLoading(true);
 
-     const token = localStorage.getItem("token");
-     console.log("Token:", token);
+     const data = await apiPost("/predict", formData);
 
-     const response = await fetch("http://127.0.0.1:8000/predict", {
-       method: "POST",
-       headers: {
-         "Content-Type": "application/json",
-         Authorization: `Bearer ${token}`,
-       },
-       body: JSON.stringify(formData),
-     });
-
-     console.log("Status:", response.status);
-
-     const data = await response.json();
      console.log("Response:", data);
-
-     if (!response.ok) {
-       alert(JSON.stringify(data, null, 2));
-       return;
-     }
 
      setResult(data);
    } catch (error) {
