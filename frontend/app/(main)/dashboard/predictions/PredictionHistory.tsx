@@ -10,23 +10,33 @@ interface Prediction {
   stage12_risk_level: string;
 }
 
-export default function PredictionHistory() {
+interface PredictionHistoryProps {
+  refreshKey?: number;
+}
+
+export default function PredictionHistory({
+  refreshKey = 0,
+}: PredictionHistoryProps) {
   const [history, setHistory] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchHistory();
-  }, []);
+  }, [refreshKey]);
 
   async function fetchHistory() {
     try {
+      setLoading(true);
+
+      // IMPORTANT: no C04 here
       const data = await apiGet("/predict/history");
 
-      console.log("Prediction History Response:", data);
+      console.log("Prediction History:", data);
 
-      setHistory(data);
+      setHistory(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Prediction History Error:", error);
+      setHistory([]);
     } finally {
       setLoading(false);
     }
@@ -35,7 +45,7 @@ export default function PredictionHistory() {
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow border p-6">
-        <p>Loading history...</p>
+        <p className="text-gray-500">Loading history...</p>
       </div>
     );
   }
@@ -45,7 +55,7 @@ export default function PredictionHistory() {
       <h2 className="text-xl font-bold mb-4">Prediction History</h2>
 
       {history.length === 0 ? (
-        <p className="text-gray-500 text-center py-6">
+        <p className="text-center text-gray-500 py-6">
           No prediction history available.
         </p>
       ) : (
@@ -62,18 +72,14 @@ export default function PredictionHistory() {
 
             <tbody>
               {history.map((item, index) => (
-                <tr key={index} className="border-b hover:bg-gray-50">
-                  <td className="py-3 font-semibold">{item.cow_id}</td>
+                <tr key={index} className="border-b">
+                  <td className="py-3 font-medium">{item.cow_id}</td>
 
-                  <td className="py-3">
-                    {item.stage1_daily_yield?.toFixed(2)} L
-                  </td>
+                  <td>{Number(item.stage1_daily_yield).toFixed(2)} L</td>
 
-                  <td className="py-3">
-                    {item.stage11_health_score?.toFixed(2)}
-                  </td>
+                  <td>{Number(item.stage11_health_score).toFixed(2)}</td>
 
-                  <td className="py-3">{item.stage12_risk_level}</td>
+                  <td className="capitalize">{item.stage12_risk_level}</td>
                 </tr>
               ))}
             </tbody>

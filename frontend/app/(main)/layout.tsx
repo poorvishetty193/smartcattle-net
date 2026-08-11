@@ -10,7 +10,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       <div className="flex-1 ml-16 flex flex-col">
         <TopNavbar />
 
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 pt-[72px]">{children}</main>
       </div>
     </div>
   );
