@@ -4,17 +4,40 @@ import { Search } from "lucide-react";
 
 export default function SearchBox() {
   return (
-    <div className="relative w-[260px]">
+    <div
+      className="
+        flex
+        h-10
+        w-[260px]
+        items-center
+        gap-2
+        rounded-lg
+        border
+        border-[#BFD1C5]
+        bg-[#F5F9F6]
+        px-3
+      "
+    >
+
       <Search
-        size={18}
-        className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
+        size={16}
+        className="text-[#53635A]"
       />
 
       <input
         type="text"
         placeholder="Filter reports..."
-        className="h-12 w-full rounded-xl border border-[#C9D6CB] bg-[#F6FAF6] pl-11 pr-4 text-[14px] outline-none transition focus:border-[#0C7A5B]"
+        className="
+          w-full
+          bg-transparent
+          font-serif
+          text-[11px]
+          text-[#26352D]
+          outline-none
+          placeholder:text-[#75847C]
+        "
       />
+
     </div>
   );
 }

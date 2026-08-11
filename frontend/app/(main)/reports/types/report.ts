@@ -1,27 +1,24 @@
 import { LucideIcon } from "lucide-react";
 
-export interface ReportCard {
-  id: number;
+export interface ReportCardData {
+  icon: LucideIcon;
+  iconBg: string;
   title: string;
   description: string;
   period: string;
-  icon: LucideIcon;
-  iconBg: string;
+  buttonText: string;
   buttonColor: string;
 }
 
-export interface DeliveryItem {
-  id: number;
+export interface DeliveryOption {
   title: string;
-  subtitle: string;
+  description: string;
   enabled: boolean;
 }
 
-export interface HistoryItem {
-  id: number;
-  type: "normal" | "warning";
-  reportName: string;
+export interface ReportHistoryItem {
+  name: string;
   timestamp: string;
-  dataPeriod: string;
-  status: "Completed" | "Archived" | "Critical" | "Legacy";
+  period: string;
+  status: string;
 }
