@@ -1,65 +1,121 @@
 "use client";
 
-import { RotateCw, Sparkles, Rocket } from "lucide-react";
-import { ReportCard as ReportCardType } from "../types/report";
+import { LucideIcon } from "lucide-react";
 
-interface Props {
-  card: ReportCardType;
+interface ReportCardProps {
+  icon: LucideIcon;
+  iconBg: string;
+  title: string;
+  description: string;
+  period: string;
+  buttonText: string;
+  buttonColor: string;
 }
 
-export default function ReportCard({ card }: Props) {
-  const Icon = card.icon;
-
-  const buttonIcon = () => {
-    switch (card.id) {
-      case 1:
-        return <RotateCw size={18} />;
-      case 2:
-        return <Sparkles size={18} />;
-      default:
-        return <Rocket size={18} />;
-    }
-  };
-
+export default function ReportCard({
+  icon: Icon,
+  iconBg,
+  title,
+  description,
+  period,
+  buttonText,
+  buttonColor,
+}: ReportCardProps) {
   return (
-    <div className="rounded-2xl border border-[#D9E5DB] bg-white p-6 shadow-sm transition-all duration-200 hover:shadow-md">
+    <div
+      className="
+        min-h-[267px]
+        rounded-xl
+        border
+        border-[#C9D8CE]
+        bg-white
+        p-6
+        shadow-[0_1px_3px_rgba(0,0,0,0.04)]
+      "
+    >
 
-      {/* Header */}
+      {/* TOP */}
 
-      <div className="mb-6 flex items-start justify-between">
+      <div className="flex items-start justify-between">
 
         <div
-          className={`flex h-14 w-14 items-center justify-center rounded-2xl ${card.iconBg}`}
+          className={`
+            flex h-12 w-12
+            items-center justify-center
+            rounded-lg
+            ${iconBg}
+          `}
         >
-          <Icon className="h-7 w-7 text-[#203040]" />
+          <Icon className="h-5 w-5 text-[#17352A]" />
         </div>
 
-        <span className="text-[12px] font-bold uppercase tracking-[1.5px] text-[#444]">
-          {card.period}
+        <span
+          className="
+            pt-1
+            font-serif
+            text-[11px]
+            font-bold
+            tracking-wide
+            text-[#34443C]
+          "
+        >
+          {period}
         </span>
 
       </div>
 
-      {/* Title */}
 
-      <h2 className="text-[18px] font-bold text-[#222]">
-        {card.title}
-      </h2>
+      {/* CONTENT */}
 
-      {/* Description */}
+      <div className="mt-5">
 
-      <p className="mt-4 min-h-[78px] text-[14px] leading-6 text-[#555]">
-        {card.description}
-      </p>
+        <h2
+          className="
+            font-serif
+            text-[16px]
+            font-bold
+            text-[#17251F]
+          "
+        >
+          {title}
+        </h2>
 
-      {/* Button */}
+        <p
+          className="
+            mt-2
+            max-w-[390px]
+            font-serif
+            text-[12px]
+            leading-[1.55]
+            text-[#52645B]
+          "
+        >
+          {description}
+        </p>
+
+      </div>
+
+
+      {/* BUTTON */}
 
       <button
-        className={`mt-7 flex h-14 w-full items-center justify-center gap-2 rounded-xl text-[18px] font-semibold text-white transition hover:brightness-110 ${card.buttonColor}`}
+        className={`
+          mt-6
+          h-[43px]
+          w-full
+          rounded-lg
+          font-serif
+          text-[15px]
+          font-semibold
+          text-white
+          transition
+          hover:brightness-95
+          ${buttonColor}
+        `}
       >
-        {buttonIcon()}
-        Generate
+        {buttonText}
       </button>
+
     </div>
   );
 }

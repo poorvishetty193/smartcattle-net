@@ -1,75 +1,146 @@
 "use client";
 
-import { Mail, ActivitySquare, ShieldCheck } from "lucide-react";
-import { deliveryItems } from "../reportData";
+import {
+  Mail,
+  ShieldCheck,
+  Activity,
+} from "lucide-react";
 
-export default function DeliveryPanel() {
+interface DeliveryOption {
+  title: string;
+  description: string;
+  enabled: boolean;
+}
+
+interface DeliveryPanelProps {
+  options: DeliveryOption[];
+}
+
+export default function DeliveryPanel({
+  options,
+}: DeliveryPanelProps) {
+  const icons = [Mail, ShieldCheck, Activity];
+
   return (
-    <div className="rounded-2xl border border-[#D9E5DB] bg-white p-6 shadow-sm">
+    <section>
 
-      {/* Heading */}
+      {/* TITLE */}
 
-      <div className="mb-6">
-        <h2 className="text-[22px] font-bold text-[#203040]">
-          Automated Delivery
-        </h2>
+      <h2
+        className="
+          font-serif
+          text-[17px]
+          font-bold
+          text-[#006B4F]
+        "
+      >
+        Automated Delivery
+      </h2>
 
-        <p className="mt-2 text-[14px] text-gray-500">
-          Configure intelligent report distribution and monitoring.
-        </p>
-      </div>
 
-      {/* Toggle List */}
+      {/* OPTIONS */}
 
-      <div className="space-y-5">
+      <div className="mt-4 space-y-3">
 
-        {deliveryItems.map((item, index) => {
+        {options.slice(0, 3).map((option, index) => {
 
-          const Icon =
-            index === 0
-              ? Mail
-              : index === 1
-              ? ShieldCheck
-              : ActivitySquare;
+          const Icon = icons[index];
 
           return (
             <div
-              key={item.id}
-              className="flex items-center justify-between"
+              key={index}
+              className="
+                flex
+                min-h-[78px]
+                items-center
+                justify-between
+                rounded-xl
+                border
+                border-[#BFD1C5]
+                bg-[#F7FBF8]
+                px-4
+                py-3
+              "
             >
+
               <div className="flex items-center gap-3">
 
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EEF6F0]">
-                  <Icon className="h-5 w-5 text-[#0C7A5B]" />
+                <div
+                  className="
+                    flex h-9 w-9
+                    items-center justify-center
+                    rounded-lg
+                    bg-[#E7F3EA]
+                  "
+                >
+                  <Icon
+                    size={17}
+                    className="text-[#008060]"
+                  />
                 </div>
 
                 <div>
-                  <p className="text-[15px] font-semibold text-[#24303A]">
-                    {item.title}
+
+                  <h3
+                    className="
+                      font-serif
+                      text-[14px]
+                      font-bold
+                      text-[#1C2923]
+                    "
+                  >
+                    {option.title}
+                  </h3>
+
+                  <p
+                    className="
+                      mt-1
+                      font-serif
+                      text-[11px]
+                      text-[#64736C]
+                    "
+                  >
+                    {option.description}
                   </p>
 
-                  <p className="text-[13px] text-gray-500">
-                    {item.subtitle}
-                  </p>
                 </div>
 
               </div>
 
-              <button
-                className={`relative h-6 w-11 rounded-full transition ${
-                  item.enabled
-                    ? "bg-[#0C7A5B]"
-                    : "bg-gray-300"
-                }`}
+
+              {/* TOGGLE */}
+
+              <div
+                className={`
+                  relative
+                  h-6
+                  w-11
+                  rounded-full
+                  ${
+                    option.enabled
+                      ? "bg-[#007D5D]"
+                      : "bg-[#D8DED9]"
+                  }
+                `}
               >
-                <span
-                  className={`absolute top-[2px] h-5 w-5 rounded-full bg-white transition ${
-                    item.enabled
-                      ? "left-[22px]"
-                      : "left-[2px]"
-                  }`}
+                <div
+                  className={`
+                    absolute
+                    top-1
+                    h-4
+                    w-4
+                    rounded-full
+                    bg-white
+                    shadow-sm
+                    transition
+                    ${
+                      option.enabled
+                        ? "right-1"
+                        : "left-1"
+                    }
+                  `}
                 />
-              </button>
+              </div>
 
             </div>
           );
@@ -77,30 +148,59 @@ export default function DeliveryPanel() {
 
       </div>
 
-      {/* Preview Card */}
 
-      <div className="mt-8 rounded-2xl bg-[#EDF8F0] p-5">
+      {/* PREVIEW IMAGE AREA */}
 
-        <div className="flex items-center justify-between">
+      <div
+        className="
+          mt-4
+          h-[205px]
+          overflow-hidden
+          rounded-xl
+          border
+          border-[#BFD1C5]
+          bg-[#EAF5ED]
+        "
+      >
 
-          <div>
-            <p className="text-[15px] font-semibold text-[#0C7A5B]">
-              Precision Management
+        <div className="flex h-full items-center justify-center">
+
+          <div className="text-center">
+
+            <Activity
+              size={42}
+              className="mx-auto text-[#008060]"
+            />
+
+            <p
+              className="
+                mt-3
+                font-serif
+                text-[13px]
+                font-semibold
+                text-[#006B4F]
+              "
+            >
+              Precision Management Active
             </p>
 
-            <p className="mt-1 text-[13px] text-gray-600">
-              AI-generated reports are ready for distribution.
+            <p
+              className="
+                mt-1
+                font-serif
+                text-[10px]
+                text-[#61736A]
+              "
+            >
+              AI-generated farm intelligence
             </p>
-          </div>
 
-          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#0C7A5B] text-white">
-            📄
           </div>
 
         </div>
 
       </div>
 
-    </div>
+    </section>
   );
 }

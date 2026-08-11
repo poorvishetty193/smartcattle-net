@@ -1,130 +1,290 @@
 "use client";
 
 import {
+  Search,
   FileText,
   AlertTriangle,
   Download,
 } from "lucide-react";
 
 import SearchBox from "./SearchBox";
-import { historyItems } from "../reportData";
 
-const statusStyles = {
-  Completed: "bg-green-100 text-green-700",
-  Archived: "bg-gray-100 text-gray-700",
-  Critical: "bg-red-100 text-red-700",
-  Legacy: "bg-yellow-100 text-yellow-700",
-};
+interface Report {
+  name: string;
+  timestamp: string;
+  period: string;
+  status: string;
+}
 
-export default function HistorySection() {
+interface HistorySectionProps {
+  reports: Report[];
+}
+
+export default function HistorySection({
+  reports,
+}: HistorySectionProps) {
+
   return (
-    <div className="rounded-2xl border border-[#D9E5DB] bg-white p-6 shadow-sm">
+    <section
+      className="
+        overflow-hidden
+        rounded-xl
+        border
+        border-[#BFD1C5]
+        bg-white
+      "
+    >
 
-      {/* Header */}
+      {/* HEADER */}
 
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h2 className="text-[22px] font-bold text-[#203040]">
-            Generation History
-          </h2>
+      <div
+        className="
+          flex
+          items-center
+          justify-between
+          border-b
+          border-[#D5E0D9]
+          px-6
+          py-4
+        "
+      >
 
-          <p className="mt-1 text-[14px] text-gray-500">
-            Recently generated intelligence reports
-          </p>
-        </div>
+        <h2
+          className="
+            font-serif
+            text-[17px]
+            font-bold
+            text-[#1C2923]
+          "
+        >
+          Generation History
+        </h2>
 
         <SearchBox />
+
       </div>
 
-      {/* Table */}
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      {/* TABLE HEADER */}
 
-          <thead>
-            <tr className="border-b border-gray-200 text-left text-sm text-gray-500">
-              <th className="pb-3 font-medium">Report</th>
-              <th className="pb-3 font-medium">Generated</th>
-              <th className="pb-3 font-medium">Period</th>
-              <th className="pb-3 font-medium">Status</th>
-              <th className="pb-3 font-medium text-center">Download</th>
-            </tr>
-          </thead>
+      <div
+        className="
+          grid
+          grid-cols-[2fr_1fr_1fr_0.8fr_0.7fr]
+          bg-[#EAF1EC]
+          px-6
+          py-3
+          font-serif
+          text-[10px]
+          font-bold
+          uppercase
+          tracking-wide
+          text-[#53635A]
+        "
+      >
 
-          <tbody>
+        <span>Report Name</span>
+        <span>Timestamp</span>
+        <span>Data Period</span>
+        <span>Status</span>
+        <span className="text-center">Download</span>
 
-            {historyItems.map((item) => (
+      </div>
 
-              <tr
-                key={item.id}
-                className="border-b border-gray-100 last:border-none"
+
+      {/* ROWS */}
+
+      {reports.slice(0, 5).map((report, index) => {
+
+        const critical =
+          report.status.toLowerCase() === "critical";
+
+        const archived =
+          report.status.toLowerCase() === "archived";
+
+        const legacy =
+          report.status.toLowerCase() === "legacy";
+
+        return (
+          <div
+            key={index}
+            className="
+              grid
+              min-h-[72px]
+              grid-cols-[2fr_1fr_1fr_0.8fr_0.7fr]
+              items-center
+              border-b
+              border-[#D5E0D9]
+              px-6
+              py-3
+            "
+          >
+
+            {/* REPORT */}
+
+            <div className="flex items-center gap-3">
+
+              {critical ? (
+                <AlertTriangle
+                  size={20}
+                  className="text-red-600"
+                />
+              ) : (
+                <FileText
+                  size={20}
+                  className="text-[#008060]"
+                />
+              )}
+
+              <span
+                className="
+                  font-serif
+                  text-[14px]
+                  text-[#1F2D26]
+                "
               >
-                <td className="py-4">
-                  <div className="flex items-center gap-3">
+                {report.name}
+              </span>
 
-                    <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                        item.type === "warning"
-                          ? "bg-red-100"
-                          : "bg-[#EEF6F0]"
-                      }`}
-                    >
-                      {item.type === "warning" ? (
-                        <AlertTriangle
-                          size={18}
-                          className="text-red-600"
-                        />
-                      ) : (
-                        <FileText
-                          size={18}
-                          className="text-[#0C7A5B]"
-                        />
-                      )}
-                    </div>
+            </div>
 
-                    <span className="font-medium text-gray-800">
-                      {item.reportName}
-                    </span>
 
-                  </div>
-                </td>
+            {/* TIMESTAMP */}
 
-                <td className="text-sm text-gray-600">
-                  {item.timestamp}
-                </td>
+            <span
+              className="
+                font-serif
+                text-[11px]
+                text-[#56675E]
+              "
+            >
+              {report.timestamp}
+            </span>
 
-                <td className="text-sm text-gray-600">
-                  {item.dataPeriod}
-                </td>
 
-                <td>
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                      statusStyles[item.status]
-                    }`}
-                  >
-                    {item.status}
-                  </span>
-                </td>
+            {/* PERIOD */}
 
-                <td className="text-center">
-                  <button className="rounded-lg p-2 transition hover:bg-gray-100">
-                    <Download
-                      size={18}
-                      className="text-[#0C7A5B]"
-                    />
-                  </button>
-                </td>
+            <span
+              className="
+                font-serif
+                text-[11px]
+                text-[#56675E]
+              "
+            >
+              {report.period}
+            </span>
 
-              </tr>
 
-            ))}
+            {/* STATUS */}
 
-          </tbody>
+            <div>
 
-        </table>
+              <span
+                className={`
+                  inline-flex
+                  rounded-md
+                  px-3
+                  py-1
+                  font-serif
+                  text-[9px]
+                  font-bold
+                  uppercase
+                  ${
+                    critical
+                      ? "bg-red-100 text-red-700"
+                      : archived
+                      ? "bg-[#D9F6E9] text-[#007B5C]"
+                      : legacy
+                      ? "bg-[#E8ECE9] text-[#59645E]"
+                      : "bg-[#A9F2D1] text-[#006B4F]"
+                  }
+                `}
+              >
+                {report.status}
+              </span>
+
+            </div>
+
+
+            {/* DOWNLOAD */}
+
+            <button
+              className="
+                mx-auto
+                text-[#007D5D]
+                transition
+                hover:text-[#004F3D]
+              "
+              title="Download"
+            >
+              <Download size={18} />
+            </button>
+
+          </div>
+        );
+      })}
+
+
+      {/* FOOTER */}
+
+      <div
+        className="
+          flex
+          items-center
+          justify-between
+          bg-[#F4F8F5]
+          px-6
+          py-3
+        "
+      >
+
+        <span
+          className="
+            font-serif
+            text-[11px]
+            text-[#52645B]
+          "
+        >
+          Showing 1-5 of 142 reports
+        </span>
+
+
+        <div className="flex gap-2">
+
+          <button
+            className="
+              rounded-md
+              border
+              border-[#BFCBC3]
+              bg-white
+              px-4
+              py-1.5
+              font-serif
+              text-[10px]
+            "
+          >
+            Previous
+          </button>
+
+          <button
+            className="
+              rounded-md
+              border
+              border-[#BFCBC3]
+              bg-white
+              px-4
+              py-1.5
+              font-serif
+              text-[10px]
+            "
+          >
+            Next
+          </button>
+
+        </div>
+
       </div>
 
-    </div>
+    </section>
   );
 }
