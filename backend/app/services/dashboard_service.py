@@ -22,11 +22,11 @@ from app.schemas.dashboard import (
     PriorityRankingItem,
     PriorityRankingResponse,
     HealthRiskItem,
-HealthRiskResponse,
-MilkYieldTrendItem,
-MilkYieldTrendResponse,
-AlertItem,
-AlertResponse,
+    HealthRiskResponse,
+    MilkYieldTrendItem,
+    MilkYieldTrendResponse,
+    AlertItem,
+    AlertResponse,
 )
 
 
@@ -34,6 +34,10 @@ class DashboardService:
     """
     Dashboard business logic.
     """
+
+    # ---------------------------------------------------------
+    # OVERVIEW
+    # ---------------------------------------------------------
 
     @staticmethod
     def get_dashboard_overview() -> OverviewResponse:
@@ -49,27 +53,60 @@ class DashboardService:
             status="Live",
         )
 
+    # ---------------------------------------------------------
+    # STATISTICS
+    # ---------------------------------------------------------
+        
     @staticmethod
     async def get_dashboard_statistics(
         db,
         current_user,
     ) -> StatisticsResponse:
         """
-        Returns dashboard statistics for the current user.
+        Returns dashboard statistics using only
+        the latest prediction for each cow.
         """
 
-        stmt = (
+        latest_predictions = (
             select(
-                func.avg(PredictionRecord.stage1_daily_yield),
-                func.avg(PredictionRecord.stage11_health_score),
-                func.count().filter(
-                    PredictionRecord.stage12_risk_level == "high"
-                ),
-                func.count().filter(
-                    PredictionRecord.stage8_stress_flag == 1
-                ),
+                PredictionRecord.id,
+                PredictionRecord.cow_label,
+                PredictionRecord.stage1_daily_yield,
+                PredictionRecord.stage11_health_score,
+                PredictionRecord.stage12_risk_level,
+                PredictionRecord.stage8_stress_flag,
+                func.row_number()
+                .over(
+                    partition_by=PredictionRecord.cow_label,
+                    order_by=PredictionRecord.created_at.desc(),
+                )
+                .label("row_num"),
             )
-            .where(PredictionRecord.user_id == current_user.id)
+            .where(
+                PredictionRecord.user_id == current_user.id,
+                PredictionRecord.cow_label != "string",
+                PredictionRecord.cow_label != "UNKNOWN",
+            )
+            .subquery()
+        )
+
+        stmt = select(
+            func.avg(
+                latest_predictions.c.stage1_daily_yield
+            ),
+            func.avg(
+                latest_predictions.c.stage11_health_score
+            ),
+            func.count().filter(
+                func.lower(
+                    latest_predictions.c.stage12_risk_level
+                ).in_(["high", "critical"])
+            ),
+            func.count().filter(
+                latest_predictions.c.stage8_stress_flag == 1
+            ),
+        ).where(
+            latest_predictions.c.row_num == 1
         )
 
         result = await db.execute(stmt)
@@ -82,11 +119,20 @@ class DashboardService:
         ) = result.one()
 
         return StatisticsResponse(
-            avg_daily_yield=round(float(avg_daily_yield or 0), 2),
+            avg_daily_yield=round(
+                float(avg_daily_yield or 0),
+                2,
+            ),
             at_risk_cows=at_risk_cows or 0,
-            avg_health_score=round(float(avg_health_score or 0), 2),
+            avg_health_score=round(
+                float(avg_health_score or 0),
+                2,
+            ),
             stress_alerts=stress_alerts or 0,
         )
+    # ---------------------------------------------------------
+    # PRODUCTIVITY HEATMAP
+    # ---------------------------------------------------------
 
     @staticmethod
     async def get_productivity_heatmap(
@@ -94,7 +140,7 @@ class DashboardService:
         current_user,
     ) -> HeatmapResponse:
         """
-        Returns productivity scores of all cows.
+        Returns the latest productivity score for each cow.
         """
 
         stmt = (
@@ -102,8 +148,16 @@ class DashboardService:
                 PredictionRecord.cow_label,
                 PredictionRecord.stage7_productivity,
             )
-            .where(PredictionRecord.user_id == current_user.id)
-            .order_by(PredictionRecord.cow_label)
+            .where(
+                PredictionRecord.user_id == current_user.id,
+                PredictionRecord.cow_label != "string",
+                PredictionRecord.cow_label != "UNKNOWN",
+            )
+            .order_by(
+                PredictionRecord.cow_label,
+                PredictionRecord.created_at.desc(),
+            )
+            .distinct(PredictionRecord.cow_label)
         )
 
         result = await db.execute(stmt)
@@ -125,30 +179,35 @@ class DashboardService:
             heatmap=heatmap
         )
 
+    # ---------------------------------------------------------
+    # FARM DECISIONS
+    # ---------------------------------------------------------
+
     @staticmethod
     async def get_farm_decisions(
         db,
         current_user,
     ) -> FarmDecisionResponse:
         """
-        Returns today's farm recommendations.
+        Returns the latest farm recommendation for each cow.
         """
 
         stmt = (
-    select(
-        PredictionRecord.cow_label,
-        PredictionRecord.stage9_decision,
-    )
-    .where(
-        PredictionRecord.user_id == current_user.id,
-        PredictionRecord.cow_label != "string",
-    )
-    .distinct(PredictionRecord.cow_label)
-    .order_by(
-        PredictionRecord.cow_label,
-        PredictionRecord.created_at.desc(),
-    )
-)
+            select(
+                PredictionRecord.cow_label,
+                PredictionRecord.stage9_decision,
+            )
+            .where(
+                PredictionRecord.user_id == current_user.id,
+                PredictionRecord.cow_label != "string",
+                PredictionRecord.cow_label != "UNKNOWN",
+            )
+            .order_by(
+                PredictionRecord.cow_label,
+                PredictionRecord.created_at.desc(),
+            )
+            .distinct(PredictionRecord.cow_label)
+        )
 
         result = await db.execute(stmt)
 
@@ -157,7 +216,10 @@ class DashboardService:
         decisions = [
             FarmDecisionItem(
                 cow_id=row.cow_label,
-                recommendation=row.stage9_decision or "No recommendation available",
+                recommendation=(
+                    row.stage9_decision
+                    or "No recommendation available"
+                ),
             )
             for row in rows
         ]
@@ -165,6 +227,14 @@ class DashboardService:
         return FarmDecisionResponse(
             decisions=decisions
         )
+
+    # ---------------------------------------------------------
+    # PRIORITY RANKING
+    # ---------------------------------------------------------
+        # ---------------------------------------------------------
+    # PRIORITY RANKING
+    # ---------------------------------------------------------
+
     @staticmethod
     async def get_priority_ranking(
         db,
@@ -172,19 +242,21 @@ class DashboardService:
     ) -> PriorityRankingResponse:
         """
         Returns priority ranking for all cows.
+
+        Highest priority score gets rank #1.
         """
 
         stmt = (
             select(
                 PredictionRecord.cow_label,
                 PredictionRecord.stage10_priority_score,
-                PredictionRecord.stage10_priority_rank,
+                PredictionRecord.created_at,
             )
             .where(
                 PredictionRecord.user_id == current_user.id,
                 PredictionRecord.cow_label != "string",
+                PredictionRecord.cow_label != "UNKNOWN",
             )
-            .distinct(PredictionRecord.cow_label)
             .order_by(
                 PredictionRecord.cow_label,
                 PredictionRecord.created_at.desc(),
@@ -192,33 +264,53 @@ class DashboardService:
         )
 
         result = await db.execute(stmt)
-
         rows = result.all()
 
-        rankings = [
-            PriorityRankingItem(
-                cow_id=row.cow_label,
-                priority_score=round(
-                    float(row.stage10_priority_score or 0),
-                    2,
-                ),
-                priority_rank=row.stage10_priority_rank or 0,
-            )
-            for row in rows
-        ]
+        # Keep only the latest prediction for each cow
+        latest_by_cow = {}
 
-        rankings.sort(key=lambda x: x.priority_rank)
+        for row in rows:
+            if row.cow_label not in latest_by_cow:
+                latest_by_cow[row.cow_label] = row
+
+        # Sort cows by priority score: highest first
+        sorted_rows = sorted(
+            latest_by_cow.values(),
+            key=lambda row: float(
+                row.stage10_priority_score or 0
+            ),
+            reverse=True,
+        )
+
+        rankings = []
+
+        for rank, row in enumerate(sorted_rows, start=1):
+            rankings.append(
+                PriorityRankingItem(
+                    cow_id=row.cow_label,
+                    priority_score=round(
+                        float(row.stage10_priority_score or 0),
+                        2,
+                    ),
+                    priority_rank=rank,
+                )
+            )
 
         return PriorityRankingResponse(
             rankings=rankings
         )
+    
+    # ---------------------------------------------------------
+    # HEALTH + RISK
+    # ---------------------------------------------------------
+
     @staticmethod
     async def get_health_risk_summary(
         db,
         current_user,
     ) -> HealthRiskResponse:
         """
-        Returns health and risk summary for all cows.
+        Returns health and risk summary for each cow.
         """
 
         stmt = (
@@ -232,12 +324,13 @@ class DashboardService:
             .where(
                 PredictionRecord.user_id == current_user.id,
                 PredictionRecord.cow_label != "string",
+                PredictionRecord.cow_label != "UNKNOWN",
             )
-            .distinct(PredictionRecord.cow_label)
             .order_by(
                 PredictionRecord.cow_label,
                 PredictionRecord.created_at.desc(),
             )
+            .distinct(PredictionRecord.cow_label)
         )
 
         result = await db.execute(stmt)
@@ -255,7 +348,10 @@ class DashboardService:
                     float(row.stage12_risk_score or 0),
                     2,
                 ),
-                risk_level=row.stage12_risk_level or "Unknown",
+                risk_level=(
+                    row.stage12_risk_level
+                    or "Unknown"
+                ),
                 risk_flag=row.stage12_risk_flag or 0,
             )
             for row in rows
@@ -264,6 +360,11 @@ class DashboardService:
         return HealthRiskResponse(
             cows=cows
         )
+
+    # ---------------------------------------------------------
+    # MILK YIELD TREND
+    # ---------------------------------------------------------
+
     @staticmethod
     async def get_milk_yield_trend(
         db,
@@ -281,12 +382,13 @@ class DashboardService:
             .where(
                 PredictionRecord.user_id == current_user.id,
                 PredictionRecord.cow_label != "string",
+                PredictionRecord.cow_label != "UNKNOWN",
             )
-            .distinct(PredictionRecord.cow_label)
             .order_by(
                 PredictionRecord.cow_label,
                 PredictionRecord.created_at.desc(),
             )
+            .distinct(PredictionRecord.cow_label)
         )
 
         result = await db.execute(stmt)
@@ -307,13 +409,19 @@ class DashboardService:
         return MilkYieldTrendResponse(
             trends=trends
         )
+
+    # ---------------------------------------------------------
+    # ALERTS
+    # ---------------------------------------------------------
+
     @staticmethod
     async def get_alerts(
         db,
         current_user,
     ) -> AlertResponse:
         """
-        Returns dashboard alerts.
+        Returns alerts based on the latest prediction
+        for each cow.
         """
 
         stmt = (
@@ -327,21 +435,24 @@ class DashboardService:
             .where(
                 PredictionRecord.user_id == current_user.id,
                 PredictionRecord.cow_label != "string",
+                PredictionRecord.cow_label != "UNKNOWN",
             )
-            .distinct(PredictionRecord.cow_label)
             .order_by(
                 PredictionRecord.cow_label,
                 PredictionRecord.created_at.desc(),
             )
+            .distinct(PredictionRecord.cow_label)
         )
 
         result = await db.execute(stmt)
+
         rows = result.all()
 
         alerts = []
 
         for row in rows:
 
+            # Stress alert
             if row.stage8_stress_flag == 1:
                 alerts.append(
                     AlertItem(
@@ -352,6 +463,7 @@ class DashboardService:
                     )
                 )
 
+            # Health alert
             if (row.stage11_health_score or 0) < 70:
                 alerts.append(
                     AlertItem(
@@ -362,16 +474,20 @@ class DashboardService:
                     )
                 )
 
+            # Risk alert
             if row.stage12_risk_flag == 1:
                 alerts.append(
                     AlertItem(
                         cow_id=row.cow_label,
                         alert_type="Risk",
-                        message=f"Risk level: {row.stage12_risk_level}",
+                        message=(
+                            f"Risk level: "
+                            f"{row.stage12_risk_level}"
+                        ),
                         severity="High",
                     )
                 )
 
         return AlertResponse(
             alerts=alerts
-        )        
+        )
