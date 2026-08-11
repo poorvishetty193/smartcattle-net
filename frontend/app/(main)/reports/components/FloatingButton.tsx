@@ -1,30 +1,29 @@
 "use client";
 
-import { Plus } from "lucide-react";
-
 export default function FloatingButton() {
   return (
     <button
       className="
         fixed
-        bottom-8
-        right-8
+        bottom-6
+        right-7
         flex
-        h-16
-        w-16
+        h-14
+        w-14
         items-center
         justify-center
         rounded-full
-        bg-[#006B4F]
+        bg-[#007D5D]
+        text-3xl
+        font-light
         text-white
-        shadow-xl
-        transition-all
-        duration-200
-        hover:scale-105
-        hover:bg-[#00543E]
+        shadow-lg
+        transition
+        hover:bg-[#006B4F]
       "
+      aria-label="Add"
     >
-      <Plus size={30} strokeWidth={2.5} />
+      +
     </button>
   );
 }

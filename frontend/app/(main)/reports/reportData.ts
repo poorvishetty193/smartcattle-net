@@ -4,113 +4,88 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-import {
-  ReportCard,
-  DeliveryItem,
-  HistoryItem,
-} from "./types/report";
-
-export const reportCards: ReportCard[] = [
+export const reportCards = [
   {
-    id: 1,
+    icon: ClipboardList,
+    iconBg: "bg-[#B9F5DC]",
     title: "Daily Herd Summary",
     description:
       "Comprehensive snapshot of metabolic rates, movement patterns, and feeding efficiency for all 1,200 head.",
     period: "24H CYCLE",
-    icon: ClipboardList,
-    iconBg: "bg-green-100",
-    buttonColor: "bg-[#006B4F]",
+    buttonText: "Generate",
+    buttonColor: "bg-[#007D5D]",
   },
-
   {
-    id: 2,
+    icon: BriefcaseMedical,
+    iconBg: "bg-[#C8DEFA]",
     title: "Weekly Vet Digest",
     description:
       "Aggregated health alerts, medication logs, and predicted vet visits for the upcoming week based on thermal trends.",
     period: "7D WINDOW",
-    icon: BriefcaseMedical,
-    iconBg: "bg-blue-100",
-    buttonColor: "bg-[#005EA8]",
+    buttonText: "Generate",
+    buttonColor: "bg-[#0872B9]",
   },
-
   {
-    id: 3,
+    icon: TrendingUp,
+    iconBg: "bg-[#E9D9FF]",
     title: "Monthly Productivity",
     description:
       "Deep-dive into yield forecasts, feed conversion ratios, and long-term sustainability metrics with AI extrapolation.",
     period: "30D TREND",
-    icon: TrendingUp,
-    iconBg: "bg-purple-100",
-    buttonColor: "bg-[#6251B5]",
+    buttonText: "Generate",
+    buttonColor: "bg-[#5B4DB7]",
   },
 ];
 
-export const deliveryItems: DeliveryItem[] = [
+
+export const deliveryOptions = [
   {
-    id: 1,
     title: "Daily Email",
-    subtitle: "06:00 AM Delivery",
+    description: "06:00 AM Delivery",
     enabled: true,
   },
-
   {
-    id: 2,
     title: "Weekly Vet Digest",
-    subtitle: "Monday Mornings",
+    description: "Monday Mornings",
     enabled: false,
   },
-
   {
-    id: 3,
     title: "Sensor Health Map",
-    subtitle: "Real-time alerts",
+    description: "Real-time alerts",
     enabled: true,
   },
 ];
 
-export const historyItems: HistoryItem[] = [
+
+export const reportHistory = [
   {
-    id: 1,
-    type: "normal",
-    reportName: "Daily_Herd_Summary_240523",
+    name: "Daily_Herd_Summary_240523",
     timestamp: "Today, 06:00 AM",
-    dataPeriod: "May 22 - May 23",
+    period: "May 22 - May 23",
     status: "Completed",
   },
-
   {
-    id: 2,
-    type: "normal",
-    reportName: "Weekly_Vet_Digest_W20",
+    name: "Weekly_Vet_Digest_W20",
     timestamp: "May 20, 08:30 AM",
-    dataPeriod: "May 13 - May 19",
+    period: "May 13 - May 19",
     status: "Completed",
   },
-
   {
-    id: 3,
-    type: "normal",
-    reportName: "Monthly_Productivity_Apr24",
+    name: "Monthly_Productivity_Apr24",
     timestamp: "May 01, 12:00 AM",
-    dataPeriod: "April 01 - April 30",
+    period: "April 01 - April 30",
     status: "Archived",
   },
-
   {
-    id: 4,
-    type: "warning",
-    reportName: "Anomaly_Report_Mastitis_V4",
+    name: "Anomaly_Report_Mastitis_V4",
     timestamp: "Apr 28, 14:15 PM",
-    dataPeriod: "Apr 28 - Apr 28",
+    period: "Apr 28 - Apr 28",
     status: "Critical",
   },
-
   {
-    id: 5,
-    type: "normal",
-    reportName: "Feed_Inventory_Q1",
+    name: "Feed_Inventory_Q1",
     timestamp: "Apr 05, 09:00 AM",
-    dataPeriod: "Jan 01 - Mar 31",
+    period: "Jan 01 - Mar 31",
     status: "Legacy",
   },
 ];
