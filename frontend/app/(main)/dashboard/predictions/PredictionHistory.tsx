@@ -10,30 +10,44 @@ interface Prediction {
   stage12_risk_level: string;
 }
 
-export default function PredictionHistory() {
+interface PredictionHistoryProps {
+  refreshKey?: number;
+}
+
+export default function PredictionHistory({
+  refreshKey = 0,
+}: PredictionHistoryProps) {
   const [history, setHistory] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchHistory();
-  }, []);
+  }, [refreshKey]);
 
   async function fetchHistory() {
     try {
-      const data = await apiGet("/predict/history?cow_id=C04");
+      setLoading(true);
+
+      // IMPORTANT: no C04 here
+      const data = await apiGet("/predict/history");
 
       console.log("Prediction History:", data);
 
       setHistory(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Prediction History Error:", error);
+      setHistory([]);
     } finally {
       setLoading(false);
     }
   }
 
   if (loading) {
-    return <p>Loading history...</p>;
+    return (
+      <div className="bg-white rounded-xl shadow border p-6">
+        <p className="text-gray-500">Loading history...</p>
+      </div>
+    );
   }
 
   return (
@@ -45,27 +59,32 @@ export default function PredictionHistory() {
           No prediction history available.
         </p>
       ) : (
-        <table className="w-full">
-          <thead>
-            <tr className="border-b">
-              <th className="text-left py-2">Cow</th>
-              <th className="text-left py-2">Daily Yield</th>
-              <th className="text-left py-2">Health</th>
-              <th className="text-left py-2">Risk</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {history.map((item, index) => (
-              <tr key={index} className="border-b">
-                <td className="py-2">{item.cow_id}</td>
-                <td>{item.stage1_daily_yield.toFixed(2)} L</td>
-                <td>{item.stage11_health_score.toFixed(2)}</td>
-                <td>{item.stage12_risk_level}</td>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-3">Cow</th>
+                <th className="text-left py-3">Daily Yield</th>
+                <th className="text-left py-3">Health</th>
+                <th className="text-left py-3">Risk</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {history.map((item, index) => (
+                <tr key={index} className="border-b">
+                  <td className="py-3 font-medium">{item.cow_id}</td>
+
+                  <td>{Number(item.stage1_daily_yield).toFixed(2)} L</td>
+
+                  <td>{Number(item.stage11_health_score).toFixed(2)}</td>
+
+                  <td className="capitalize">{item.stage12_risk_level}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

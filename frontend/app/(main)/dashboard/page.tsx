@@ -5,6 +5,7 @@ import Statistics from "./statistics/page";
 import Charts from "./charts/page";
 import Widgets from "./widgets/page";
 import Analytics from "./analytics/page";
+import HealthRisk from "./health-risk/page";
 
 export default function DashboardPage() {
   return (
@@ -24,6 +25,7 @@ export default function DashboardPage() {
       </div>
 
       <Analytics />
+      <HealthRisk />
     </div>
   );
 }
