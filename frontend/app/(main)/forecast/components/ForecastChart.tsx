@@ -1,6 +1,43 @@
 "use client";
 
-export default function ForecastChart() {
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+
+interface ForecastChartProps {
+  prediction: {
+    stage6_forecast?: {
+      s6_forecast_7d?: number[];
+      s6_forecast_7d_mean?: number;
+      s6_trend_slope?: number;
+      s6_trend_direction?: number;
+    };
+  } | null;
+  loading: boolean;
+}
+
+interface ChartData {
+  day: string;
+  forecast: number;
+}
+
+export default function ForecastChart({
+  prediction,
+  loading,
+}: ForecastChartProps) {
+  const forecast = prediction?.stage6_forecast?.s6_forecast_7d ?? [];
+
+  const data: ChartData[] = forecast.map((value, index) => ({
+    day: `Day ${index + 1}`,
+    forecast: Number(value.toFixed(2)),
+  }));
+
   return (
     <div className="rounded-2xl border bg-white p-6 shadow-sm">
       <div className="mb-6 flex items-center justify-between">
@@ -10,42 +47,68 @@ export default function ForecastChart() {
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            Historical performance vs AI-driven forecast
+            AI-powered 7-day milk yield forecast
           </p>
         </div>
 
-        <div className="flex items-center gap-5 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-full bg-green-700"></div>
-            Historical
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-full bg-green-400"></div>
-            Predicted
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span>THI Overlay</span>
-
-            <button className="relative h-6 w-11 rounded-full bg-green-600">
-              <span className="absolute right-1 top-1 h-4 w-4 rounded-full bg-white"></span>
-            </button>
-          </div>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <span className="h-3 w-3 rounded-full bg-green-500" />
+          AI Forecast
         </div>
       </div>
 
-      <div className="flex h-[420px] items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50">
-        <div className="text-center">
-          <h3 className="text-lg font-semibold text-gray-600">
-            Chart Placeholder
-          </h3>
-
-          <p className="mt-2 text-gray-400">
-            Recharts graph will be integrated here
-          </p>
+      {loading ? (
+        <div className="flex h-[420px] items-center justify-center">
+          <p className="text-gray-500">Loading forecast...</p>
         </div>
-      </div>
+      ) : data.length === 0 ? (
+        <div className="flex h-[420px] items-center justify-center">
+          <p className="text-gray-500">No forecast data available.</p>
+        </div>
+      ) : (
+        <div className="h-[420px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={data}
+              margin={{
+                top: 20,
+                right: 20,
+                left: 10,
+                bottom: 20,
+              }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+
+              <XAxis dataKey="day" />
+
+              <YAxis
+                domain={["auto", "auto"]}
+                label={{
+                  value: "kg/day",
+                  angle: -90,
+                  position: "insideLeft",
+                }}
+              />
+
+              <Tooltip
+                formatter={(value) => [
+                  `${Number(value).toFixed(2)} kg/day`,
+                  "Forecast",
+                ]}
+              />
+
+              <Line
+                type="monotone"
+                dataKey="forecast"
+                stroke="#16a34a"
+                strokeWidth={3}
+                dot={{ r: 5 }}
+                activeDot={{ r: 7 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }
