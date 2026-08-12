@@ -201,10 +201,11 @@ class Stage6Service:
         )
         
         return {
-            "s6_forecast_7d_mean": forecast_mean,
-            "s6_trend_slope": float(slope),
-            "s6_trend_direction": direction,
-        }
+    "s6_forecast_7d": final_forecast.tolist(),
+    "s6_forecast_7d_mean": forecast_mean,
+    "s6_trend_slope": float(slope),
+    "s6_trend_direction": direction,
+}
 
 
 # ---------------------------------------------------------------------------
