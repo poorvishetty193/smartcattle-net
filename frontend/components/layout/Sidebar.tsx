@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
@@ -12,70 +13,91 @@ import {
   Brain,
 } from "lucide-react";
 
+const menuItems = [
+  {
+    icon: LayoutDashboard,
+    label: "Dashboard",
+    href: "/dashboard",
+  },
+  {
+    icon: Users,
+    label: "Herd",
+    href: "/herd",
+  },
+  {
+    icon: Bell,
+    label: "Alerts",
+    href: "/alerts",
+  },
+  {
+    icon: TrendingUp,
+    label: "Forecast",
+    href: "/forecast",
+  },
+  {
+    icon: Brain,
+    label: "Health",
+    href: "/dashboard/predictions",
+  },
+  {
+    icon: Bot,
+    label: "Chatbot",
+    href: "/chatbot",
+  },
+  {
+    icon: FileText,
+    label: "Reports",
+    href: "/reports",
+  },
+];
+
 export default function Sidebar() {
+  const pathname = usePathname();
+
   return (
-    <aside className="fixed left-0 top-0 h-screen w-16 bg-white border-r border-gray-200 flex flex-col items-center py-5 shadow-sm z-50">
+    <aside className="fixed left-0 top-0 z-50 flex h-screen w-16 flex-col items-center border-r border-gray-200 bg-white py-5 shadow-sm">
+      {/* Logo */}
       <div className="mb-8">
-        <div className="w-10 h-10 rounded-xl bg-green-600 flex items-center justify-center">
-          <span className="text-white text-xl font-bold">🌿</span>
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-600">
+          <span className="text-xl font-bold text-white">🌿</span>
         </div>
       </div>
 
+      {/* Navigation */}
       <nav className="flex flex-col gap-4">
-        <Link
-          href="/dashboard"
-          className="w-11 h-11 rounded-xl bg-green-100 text-green-700 flex items-center justify-center hover:bg-green-200"
-        >
-          <LayoutDashboard size={22} />
-        </Link>
+        {menuItems.map((item) => {
+          const Icon = item.icon;
 
-        <Link
-          href="/herd"
-          className="w-11 h-11 rounded-xl text-gray-500 hover:bg-gray-100 flex items-center justify-center"
-        >
-          <Users size={22} />
-        </Link>
+          const isActive =
+            pathname === item.href || pathname.startsWith(`${item.href}/`);
 
-        <Link
-          href="/alerts"
-          className="w-11 h-11 rounded-xl text-gray-500 hover:bg-gray-100 flex items-center justify-center"
-        >
-          <Bell size={22} />
-        </Link>
-
-        <Link
-          href="/forecast"
-          className="w-11 h-11 rounded-xl text-gray-500 hover:bg-gray-100 flex items-center justify-center"
-        >
-          <TrendingUp size={22} />
-        </Link>
-
-        <Link
-          href="/dashboard/predictions"
-          className="w-11 h-11 rounded-xl text-gray-500 hover:bg-gray-100 flex items-center justify-center"
-        >
-          <Brain size={22} />
-        </Link>
-
-        <Link
-          href="/chatbot"
-          className="w-11 h-11 rounded-xl text-gray-500 hover:bg-gray-100 flex items-center justify-center"
-        >
-          <Bot size={22} />
-        </Link>
-
-        <Link
-          href="/reports"
-          className="w-11 h-11 rounded-xl text-gray-500 hover:bg-gray-100 flex items-center justify-center"
-        >
-          <FileText size={22} />
-        </Link>
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              title={item.label}
+              className={`flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-200 ${
+                isActive
+                  ? "bg-green-100 text-green-700"
+                  : "text-gray-500 hover:bg-green-50 hover:text-green-700"
+              }`}
+            >
+              <Icon size={22} />
+            </Link>
+          );
+        })}
       </nav>
 
+      {/* Settings */}
       <div className="mt-auto">
         <Link
           href="/settings"
-          className="w-11 h-11 rounded-xl text-gray-500 hover:bg-gray-100 flex items-center justify-center"
+          title="Settings"
+          className={`flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-200 ${
+            pathname === "/settings"
+              ? "bg-green-100 text-green-700"
+              : "text-gray-500 hover:bg-green-50 hover:text-green-700"
+          }`}
         >
           <Settings size={22} />
         </Link>

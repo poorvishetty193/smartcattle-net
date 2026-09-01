@@ -47,7 +47,7 @@ export default function AlertsPage() {
 
   const fetchAlerts = async () => {
     try {
-      const data: AlertResponse = await apiGet("/dashboard/alerts");
+      const data: AlertResponse = await apiGet("/alerts");
 
       console.log("Alerts Response:", data);
 
