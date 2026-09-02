@@ -20,6 +20,7 @@ from app.api.routers import (
     dashboard,
     reports,
     alerts,
+    settings,
 )
 
 api_router = APIRouter()
@@ -42,5 +43,7 @@ api_router.include_router(predictions.router)
 # Alerts
 api_router.include_router(alerts.router)
 
+# Settings
+api_router.include_router(settings.router)
 # System
 api_router.include_router(system.router)

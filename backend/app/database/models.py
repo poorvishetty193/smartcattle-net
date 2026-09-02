@@ -148,8 +148,165 @@ class User(TimestampMixin, Base):
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email!r} active={self.is_active}>"
+    settings: Mapped[Optional["FarmSettings"]] = relationship(
+    "FarmSettings",
+    back_populates="user",
+    uselist=False,
+    cascade="all, delete-orphan",
+    lazy="selectin",
+)
+
+# ---------------------------------------------------------------------------
+# FarmSettings
+# ---------------------------------------------------------------------------
 
 
+class FarmSettings(TimestampMixin, Base):
+    """
+    Per-user SmartCattle Net farm and AI configuration settings.
+    """
+
+    __tablename__ = "farm_settings"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        server_default=text("gen_random_uuid()"),
+        doc="Unique settings identifier.",
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+        index=True,
+        doc="The user who owns these settings.",
+    )
+
+    # -----------------------------------------------------------------------
+    # Farm profile
+    # -----------------------------------------------------------------------
+
+    farm_name: Mapped[Optional[str]] = mapped_column(
+        String(256),
+        nullable=True,
+        default="Green Valley Precision Dairy",
+    )
+
+    farm_location: Mapped[Optional[str]] = mapped_column(
+        String(512),
+        nullable=True,
+        default="4428 County Road 12, Spring Valley, WI 54767",
+    )
+
+    timezone: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        default="CST (UTC -6)",
+    )
+
+    # -----------------------------------------------------------------------
+    # Model thresholds
+    # -----------------------------------------------------------------------
+
+    milk_drop_threshold: Mapped[float] = mapped_column(
+        Numeric(6, 2),
+        nullable=False,
+        default=15.0,
+        doc="Milk drop percentage threshold.",
+    )
+
+    heat_stress_thi: Mapped[float] = mapped_column(
+        Numeric(6, 2),
+        nullable=False,
+        default=72.0,
+        doc="Heat stress THI threshold.",
+    )
+
+    scc_mastitis_threshold: Mapped[float] = mapped_column(
+        Numeric(10, 2),
+        nullable=False,
+        default=200000.0,
+        doc="Somatic cell count threshold for mastitis alerts.",
+    )
+
+    priority_score_cutoff: Mapped[float] = mapped_column(
+        Numeric(6, 2),
+        nullable=False,
+        default=8.5,
+        doc="Priority score cutoff out of 10.",
+    )
+
+    # -----------------------------------------------------------------------
+    # Notifications
+    # -----------------------------------------------------------------------
+
+    critical_push: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+    )
+
+    critical_email: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+    )
+
+    critical_sms: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+    )
+
+    daily_report_email: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+    )
+
+    heat_push: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+    )
+
+    heat_email: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+    )
+
+    heat_sms: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
+
+    # -----------------------------------------------------------------------
+    # Relationship
+    # -----------------------------------------------------------------------
+
+    user: Mapped["User"] = relationship(
+        "User",
+        back_populates="settings",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<FarmSettings id={self.id} "
+            f"user_id={self.user_id} "
+            f"farm_name={self.farm_name!r}>"
+        )
 # ---------------------------------------------------------------------------
 # Cow
 # ---------------------------------------------------------------------------
