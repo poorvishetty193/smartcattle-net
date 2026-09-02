@@ -134,14 +134,15 @@ async def create_prediction(
     # 4. Run Master Pipeline
     try:
         response = await PredictionPipeline.run_pipeline(
-            db=db,
-            user_id=current_user.id,
-            cow_label=request_in.cow_id or "UNKNOWN",
-            features=features,
-            history_yields=history_yields,
-            history_records=history_records,
-            cow_uuid=cow_uuid,
-        )
+    db=db,
+    user_id=current_user.id,
+    cow_label=request_in.cow_id or "UNKNOWN",
+    features=features,
+    history_yields=history_yields,
+    history_records=history_records,
+    cow_uuid=cow_uuid,
+    input_data=request_in.model_dump(),
+)
 
         return response
 
@@ -317,11 +318,8 @@ async def rerun_latest_prediction(
     cow_id: str,
 ) -> Any:
     """
-    Re-run the prediction for a cow using the latest stored input data.
-
-    The most recent prediction's raw_response contains the original
-    PredictionRequest fields. Those fields are reconstructed and sent
-    through the normal 12-stage pipeline.
+    Re-run the latest prediction for a cow using the original
+    PredictionRequest that was stored with the previous run.
     """
 
     # 1. Find latest prediction for this user + cow.
@@ -344,34 +342,26 @@ async def rerun_latest_prediction(
             detail=f"No previous prediction found for cow '{cow_id}'.",
         )
 
+    # 2. Get the original request data stored by the pipeline.
     raw = record.raw_response or {}
+    stored_input = raw.get("input")
 
-    # 2. Reconstruct only fields required by PredictionRequest.
-    request_data: Dict[str, Any] = {
-        "cow_id": cow_id,
-    }
+    if not isinstance(stored_input, dict):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"Cannot re-run prediction for cow '{cow_id}'. "
+                "The previous prediction does not contain the original "
+                "input data. Run a new prediction once to enable re-run."
+            ),
+        )
 
-    for field_name in PredictionRequest.model_fields.keys():
+    # Always use the cow_id from the endpoint.
+    stored_input["cow_id"] = cow_id
 
-        if field_name == "cow_id":
-            continue
-
-        if field_name not in raw:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=(
-                    f"Cannot re-run prediction for cow '{cow_id}'. "
-                    f"Previous prediction is missing input field "
-                    f"'{field_name}'."
-                ),
-            )
-
-        request_data[field_name] = raw[field_name]
-
-    # 3. Validate reconstructed request.
+    # 3. Validate the stored request.
     try:
-        request_in = PredictionRequest(**request_data)
-
+        request_in = PredictionRequest(**stored_input)
     except Exception as exc:
         logger.exception(
             "Failed to reconstruct prediction request for cow: %s",

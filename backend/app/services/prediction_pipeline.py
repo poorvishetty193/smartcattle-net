@@ -56,15 +56,18 @@ class PredictionPipeline:
 
     @classmethod
     async def run_pipeline(
-        cls,
-        db: AsyncSession,
-        user_id: uuid.UUID,
-        cow_label: str,
-        features: Dict[str, Union[int, float, None]],
-        history_yields: List[float],
-        history_records: Optional[List[Dict[str, Union[int, float, None]]]] = None,
-        cow_uuid: Optional[uuid.UUID] = None,
-    ) -> PredictionResponse:
+    cls,
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    cow_label: str,
+    features: Dict[str, Union[int, float, None]],
+    history_yields: List[float],
+    history_records: Optional[
+        List[Dict[str, Union[int, float, None]]]
+    ] = None,
+    cow_uuid: Optional[uuid.UUID] = None,
+    input_data: Optional[Dict[str, object]] = None,
+) -> PredictionResponse:
         """
         Execute all 12 stages, save to DB, and return the response.
 
@@ -267,7 +270,11 @@ class PredictionPipeline:
             stage12_risk_level=s12["s12_risk_level"],
             
             # Store the complete JSON-serialisable payload
-            raw_response=response_model.model_dump(),
+            raw_response={
+    **features,
+    "input": input_data or {},
+    **response_model.model_dump(),
+},
         )
 
         db.add(record)
