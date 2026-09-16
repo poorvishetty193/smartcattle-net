@@ -21,6 +21,7 @@ from app.api.routers import (
     reports,
     alerts,
     settings,
+    chatbot,
 )
 
 api_router = APIRouter()
@@ -45,5 +46,7 @@ api_router.include_router(alerts.router)
 
 # Settings
 api_router.include_router(settings.router)
+# Chat
+api_router.include_router(chatbot.router)
 # System
 api_router.include_router(system.router)

@@ -121,3 +121,10 @@ http://127.0.0.1:8000/openapi.json
 - TensorFlow
 - Scikit-learn
 - XGBoost
+
+
+ <!-- {
+  "email": "Shetty@example.com",
+  "password": "secure123!",
+  "full_name": "Shetty Shetty"
+} -->
