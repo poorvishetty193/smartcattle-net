@@ -62,7 +62,14 @@ def prediction_to_context(
     """
     Convert one PredictionRecord into a compact chatbot context.
     """
+    raw_response = record.raw_response or {}
 
+    stage6_forecast = raw_response.get("stage6_forecast", {})
+
+    forecast_7d = None
+
+    if isinstance(stage6_forecast, dict):
+        forecast_7d = stage6_forecast.get("s6_forecast_7d")
     return {
         "prediction_id": str(record.id),
         "cow_id": record.cow_label,
@@ -104,6 +111,7 @@ def prediction_to_context(
             "trend_direction": _safe_int(
                 record.stage6_trend_dir
             ),
+            "forecast_7d": forecast_7d,
         },
 
         # -----------------------------------------------------
