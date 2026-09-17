@@ -76,20 +76,137 @@ def detect_intent(message: str) -> str:
     """
     Determine what kind of farm question the user asked.
 
-    This is intentionally simple for now.
-    Later LangChain / LLM query understanding can replace this.
+    Cow-specific questions are checked first so that
+    questions such as "What is the risk level of C100?"
+    get a specific answer instead of the generic cow summary.
     """
 
     text = message.lower().strip()
 
-    # Specific cow question
-    if re.search(
+    # ---------------------------------------------------------
+    # Cow-specific questions
+    # ---------------------------------------------------------
+
+    has_cow_id = re.search(
         r"\b(?:cow\s*)?[a-z]\d+\b",
         text,
-    ):
+    )
+
+    if has_cow_id:
+
+        # Cow risk
+        if any(
+            phrase in text
+            for phrase in [
+                "risk level",
+                "risk score",
+                "risk status",
+                "how risky",
+                "is it risky",
+                "is the cow at risk",
+            ]
+        ):
+        
+            return "cow_risk"
+        
+        # Cow forecast
+        if any(
+    phrase in text
+    for phrase in [
+        "forecast",
+        "milk forecast",
+        "yield forecast",
+        "milk trend",
+        "production trend",
+        "future yield",
+        "next 7 days",
+        "next seven days",
+    ]
+):
+            return "cow_forecast"
+        # Cow milk production
+        if any(
+            phrase in text
+            for phrase in [
+                "predicted milk",
+                "predicted yield",
+                "milk yield",
+                "daily yield",
+                "milk production",
+                "milk quantity",
+                "next milking",
+            ]
+        ):
+            return "cow_milk"
+
+        # Cow health
+        if any(
+            phrase in text
+            for phrase in [
+                "health score",
+                "health status",
+                "is healthy",
+                "healthy",
+                "unhealthy",
+            ]
+        ):
+            return "cow_health"
+
+        # Cow heat stress
+        if any(
+            phrase in text
+            for phrase in [
+                "heat stress",
+                "heat-stress",
+                "heat stressed",
+                "under heat stress",
+            ]
+        ):
+            return "cow_heat_stress"
+
+        # Cow milk drop
+        if any(
+            phrase in text
+            for phrase in [
+                "milk drop",
+                "milk-drop",
+                "production drop",
+                "dropping milk",
+            ]
+        ):
+            return "cow_milk_drop"
+
+        # Cow productivity
+        if any(
+            phrase in text
+            for phrase in [
+                "productivity",
+                "productivity score",
+                "productive",
+            ]
+        ):
+            return "cow_productivity"
+
+        # Cow forecast
+        if any(
+            phrase in text
+            for phrase in [
+                "forecast",
+                "trend",
+                "future yield",
+                "next 7 days",
+                "next seven days",
+            ]
+        ):
+            return "cow_forecast"
+
+        # Generic cow question
         return "cow"
 
-    # Risk
+    # ---------------------------------------------------------
+    # Farm-wide risk
+    # ---------------------------------------------------------
+
     if any(
         phrase in text
         for phrase in [
@@ -104,7 +221,10 @@ def detect_intent(message: str) -> str:
     ):
         return "risk"
 
+    # ---------------------------------------------------------
     # Heat stress
+    # ---------------------------------------------------------
+
     if any(
         phrase in text
         for phrase in [
@@ -117,7 +237,10 @@ def detect_intent(message: str) -> str:
     ):
         return "heat_stress"
 
+    # ---------------------------------------------------------
     # Milk drop
+    # ---------------------------------------------------------
+
     if any(
         phrase in text
         for phrase in [
@@ -130,7 +253,10 @@ def detect_intent(message: str) -> str:
     ):
         return "milk_drop"
 
+    # ---------------------------------------------------------
     # Health
+    # ---------------------------------------------------------
+
     if any(
         phrase in text
         for phrase in [
@@ -143,7 +269,10 @@ def detect_intent(message: str) -> str:
     ):
         return "health"
 
+    # ---------------------------------------------------------
     # Attention
+    # ---------------------------------------------------------
+
     if any(
         phrase in text
         for phrase in [
@@ -157,7 +286,10 @@ def detect_intent(message: str) -> str:
     ):
         return "attention"
 
+    # ---------------------------------------------------------
     # Productivity
+    # ---------------------------------------------------------
+
     if any(
         phrase in text
         for phrase in [
@@ -169,7 +301,10 @@ def detect_intent(message: str) -> str:
     ):
         return "productivity"
 
+    # ---------------------------------------------------------
     # Milk production
+    # ---------------------------------------------------------
+
     if any(
         phrase in text
         for phrase in [
@@ -184,7 +319,10 @@ def detect_intent(message: str) -> str:
     ):
         return "milk_production"
 
+    # ---------------------------------------------------------
     # General farm / herd
+    # ---------------------------------------------------------
+
     if any(
         phrase in text
         for phrase in [
@@ -860,7 +998,397 @@ def extract_cow_id(
         return None
 
     return match.group(1).upper()
+async def get_cow_prediction_context(
+    message: str,
+    db: SessionDep,
+    current_user: CurrentUser,
+):
+    cow_id = extract_cow_id(message)
 
+    if cow_id is None:
+        return None, None, None
+
+    context = await build_cow_context(
+        db=db,
+        user_id=current_user.id,
+        cow_id=cow_id,
+    )
+
+    if context is None:
+        return cow_id, None, None
+
+    return cow_id, context.get("cow", {}), context.get("latest_prediction")
+async def answer_cow_risk(
+    message: str,
+    db: SessionDep,
+    current_user: CurrentUser,
+) -> ChatResponse:
+
+    cow_id, cow, prediction = await get_cow_prediction_context(
+        message, db, current_user
+    )
+
+    if cow_id is None:
+        return ChatResponse(
+            answer="Please provide a cow ID, for example C100.",
+            intent="cow_risk",
+        )
+
+    if cow is None:
+        return ChatResponse(
+            answer=f"I couldn't find cow {cow_id} in your active farm records.",
+            intent="cow_risk",
+            data={"cow_id": cow_id, "found": False},
+        )
+
+    if not prediction:
+        return ChatResponse(
+            answer=f"No prediction data is currently available for cow {cow_id}.",
+            intent="cow_risk",
+            data={"cow_id": cow_id, "prediction": None},
+        )
+
+    risk = prediction.get("risk", {})
+
+    level = risk.get("level")
+    score = risk.get("score")
+
+    return ChatResponse(
+        answer=(
+            f"Cow {cow_id} has a {level} risk level "
+            f"with a risk score of {_format_number(score)}."
+        ),
+        intent="cow_risk",
+        data={
+            "cow_id": cow_id,
+            "risk": risk,
+        },
+    )
+async def answer_cow_forecast(
+    message: str,
+    db: SessionDep,
+    current_user: CurrentUser,
+) -> ChatResponse:
+
+    cow_id, cow, prediction = await get_cow_prediction_context(
+        message, db, current_user
+    )
+
+    if cow_id is None:
+        return ChatResponse(
+            answer="Please provide a cow ID, for example C100.",
+            intent="cow_forecast",
+        )
+
+    if cow is None:
+        return ChatResponse(
+            answer=f"I couldn't find cow {cow_id} in your active farm records.",
+            intent="cow_forecast",
+            data={"cow_id": cow_id, "found": False},
+        )
+
+    if not prediction:
+        return ChatResponse(
+            answer=f"No forecast data is currently available for cow {cow_id}.",
+            intent="cow_forecast",
+            data={"cow_id": cow_id, "prediction": None},
+        )
+
+    milk = prediction.get("milk_production", {})
+
+    forecast_mean = milk.get("forecast_mean_l")
+    trend_slope = milk.get("trend_slope")
+    trend_direction = milk.get("trend_direction")
+
+    forecast = prediction.get("forecast")
+
+    # The current prediction context stores the forecast summary
+    # in milk_production. If the full 7-day forecast is available,
+    # include it as well.
+    forecast_values = None
+
+    if isinstance(forecast, dict):
+        forecast_values = forecast.get("s6_forecast_7d")
+
+    if forecast_values is None:
+        forecast_values = milk.get("forecast_7d")
+
+    if trend_direction == 1:
+        trend_text = "increasing"
+    elif trend_direction == -1:
+        trend_text = "decreasing"
+    else:
+        trend_text = "stable"
+
+    answer = (
+        f"Cow {cow_id}'s forecasted average daily milk yield is "
+        f"{_format_number(forecast_mean)} L. "
+        f"The current milk-yield trend is {trend_text}."
+    )
+
+    if trend_slope is not None:
+        answer += (
+            f" The trend slope is "
+            f"{_format_number(trend_slope, 4)}."
+        )
+
+    if forecast_values:
+        formatted_values = ", ".join(
+            f"{_format_number(value)} L"
+            for value in forecast_values
+        )
+
+        answer += (
+            f" The 7-day forecast is: {formatted_values}."
+        )
+
+    return ChatResponse(
+        answer=answer,
+        intent="cow_forecast",
+        data={
+            "cow_id": cow_id,
+            "forecast_mean_l": forecast_mean,
+            "trend_slope": trend_slope,
+            "trend_direction": trend_direction,
+            "forecast_7d": forecast_values,
+        },
+    )    
+async def answer_cow_milk(
+    message: str,
+    db: SessionDep,
+    current_user: CurrentUser,
+) -> ChatResponse:
+
+    cow_id, cow, prediction = await get_cow_prediction_context(
+        message, db, current_user
+    )
+
+    if cow_id is None:
+        return ChatResponse(
+            answer="Please provide a cow ID, for example C100.",
+            intent="cow_milk",
+        )
+
+    if cow is None:
+        return ChatResponse(
+            answer=f"I couldn't find cow {cow_id} in your active farm records.",
+            intent="cow_milk",
+            data={"cow_id": cow_id, "found": False},
+        )
+
+    if not prediction:
+        return ChatResponse(
+            answer=f"No milk prediction is currently available for cow {cow_id}.",
+            intent="cow_milk",
+        )
+
+    milk = prediction.get("milk_production", {})
+
+    daily_yield = milk.get("daily_yield_l")
+    next_milking = milk.get("next_milking_l")
+
+    return ChatResponse(
+        answer=(
+            f"Cow {cow_id}'s predicted daily milk yield is "
+            f"{_format_number(daily_yield)} L. "
+            f"The predicted next-milking yield is "
+            f"{_format_number(next_milking)} L."
+        ),
+        intent="cow_milk",
+        data={
+            "cow_id": cow_id,
+            "milk_production": milk,
+        },
+    )  
+async def answer_cow_health(
+    message: str,
+    db: SessionDep,
+    current_user: CurrentUser,
+) -> ChatResponse:
+
+    cow_id, cow, prediction = await get_cow_prediction_context(
+        message, db, current_user
+    )
+
+    if cow_id is None:
+        return ChatResponse(
+            answer="Please provide a cow ID, for example C100.",
+            intent="cow_health",
+        )
+
+    if cow is None:
+        return ChatResponse(
+            answer=f"I couldn't find cow {cow_id} in your active farm records.",
+            intent="cow_health",
+        )
+
+    if not prediction:
+        return ChatResponse(
+            answer=f"No health prediction is currently available for cow {cow_id}.",
+            intent="cow_health",
+        )
+
+    health = prediction.get("health", {})
+    score = health.get("score")
+
+    return ChatResponse(
+        answer=(
+            f"Cow {cow_id} has a health score of "
+            f"{_format_number(score)}."
+        ),
+        intent="cow_health",
+        data={
+            "cow_id": cow_id,
+            "health": health,
+        },
+    )
+async def answer_cow_heat_stress(
+    message: str,
+    db: SessionDep,
+    current_user: CurrentUser,
+) -> ChatResponse:
+
+    cow_id, cow, prediction = await get_cow_prediction_context(
+        message, db, current_user
+    )
+
+    if cow_id is None:
+        return ChatResponse(
+            answer="Please provide a cow ID, for example C100.",
+            intent="cow_heat_stress",
+        )
+
+    if cow is None:
+        return ChatResponse(
+            answer=f"I couldn't find cow {cow_id} in your active farm records.",
+            intent="cow_heat_stress",
+        )
+
+    if not prediction:
+        return ChatResponse(
+            answer=f"No heat-stress prediction is currently available for cow {cow_id}.",
+            intent="cow_heat_stress",
+        )
+
+    stress = prediction.get("heat_stress", {})
+    flag = stress.get("flag")
+    probability = stress.get("probability")
+
+    if flag == 1:
+        answer = (
+            f"Cow {cow_id} is currently flagged for heat stress. "
+            f"The predicted probability is {_percentage(probability)}."
+        )
+    else:
+        answer = (
+            f"Cow {cow_id} is not currently flagged for heat stress. "
+            f"The predicted probability is {_percentage(probability)}."
+        )
+
+    return ChatResponse(
+        answer=answer,
+        intent="cow_heat_stress",
+        data={
+            "cow_id": cow_id,
+            "heat_stress": stress,
+        },
+    )
+async def answer_cow_milk_drop(
+    message: str,
+    db: SessionDep,
+    current_user: CurrentUser,
+) -> ChatResponse:
+
+    cow_id, cow, prediction = await get_cow_prediction_context(
+        message, db, current_user
+    )
+
+    if cow_id is None:
+        return ChatResponse(
+            answer="Please provide a cow ID, for example C100.",
+            intent="cow_milk_drop",
+        )
+
+    if cow is None:
+        return ChatResponse(
+            answer=f"I couldn't find cow {cow_id} in your active farm records.",
+            intent="cow_milk_drop",
+        )
+
+    if not prediction:
+        return ChatResponse(
+            answer=f"No milk-drop prediction is currently available for cow {cow_id}.",
+            intent="cow_milk_drop",
+        )
+
+    milk = prediction.get("milk_production", {})
+
+    flag = milk.get("drop_flag")
+    probability = milk.get("drop_probability")
+
+    if flag == 1:
+        answer = (
+            f"Cow {cow_id} is currently flagged for a possible "
+            f"milk production drop. The predicted probability is "
+            f"{_percentage(probability)}."
+        )
+    else:
+        answer = (
+            f"Cow {cow_id} is not currently flagged for a milk "
+            f"production drop. The predicted probability is "
+            f"{_percentage(probability)}."
+        )
+
+    return ChatResponse(
+        answer=answer,
+        intent="cow_milk_drop",
+        data={
+            "cow_id": cow_id,
+            "milk_production": milk,
+        },
+    )
+async def answer_cow_productivity(
+    message: str,
+    db: SessionDep,
+    current_user: CurrentUser,
+) -> ChatResponse:
+
+    cow_id, cow, prediction = await get_cow_prediction_context(
+        message, db, current_user
+    )
+
+    if cow_id is None:
+        return ChatResponse(
+            answer="Please provide a cow ID, for example C100.",
+            intent="cow_productivity",
+        )
+
+    if cow is None:
+        return ChatResponse(
+            answer=f"I couldn't find cow {cow_id} in your active farm records.",
+            intent="cow_productivity",
+        )
+
+    if not prediction:
+        return ChatResponse(
+            answer=f"No productivity prediction is currently available for cow {cow_id}.",
+            intent="cow_productivity",
+        )
+
+    productivity = prediction.get("productivity", {})
+    score = productivity.get("score")
+
+    return ChatResponse(
+        answer=(
+            f"Cow {cow_id} has a productivity score of "
+            f"{_format_number(score)}."
+        ),
+        intent="cow_productivity",
+        data={
+            "cow_id": cow_id,
+            "productivity": productivity,
+        },
+    )
 
 async def answer_cow_question(
     message: str,
@@ -1039,6 +1567,62 @@ async def chat(
             db=db,
             current_user=current_user,
         )
+    if intent == "cow_risk":
+        return await answer_cow_risk(
+        message=message,
+        db=db,
+        current_user=current_user,
+    )
+
+    if intent == "cow_milk":
+        return await answer_cow_milk(
+        message=message,
+        db=db,
+        current_user=current_user,
+    )
+
+    if intent == "cow_health":
+        return await answer_cow_health(
+        message=message,
+        db=db,
+        current_user=current_user,
+    )
+
+    if intent == "cow_heat_stress":
+        return await answer_cow_heat_stress(
+        message=message,
+        db=db,
+        current_user=current_user,
+    )
+
+    if intent == "cow_milk_drop":
+        return await answer_cow_milk_drop(
+        message=message,
+        db=db,
+        current_user=current_user,
+    )
+    if intent == "cow_forecast":
+        return await answer_cow_forecast(
+        message=message,
+        db=db,
+        current_user=current_user,
+    )    
+
+    if intent == "cow_productivity":
+        return await answer_cow_productivity(
+        message=message,
+        db=db,
+        current_user=current_user,
+    )
+
+    if intent == "cow":
+        return await answer_cow_question(
+        message=message,
+        db=db,
+        current_user=current_user,
+    )    
+           
+       
 
     # ---------------------------------------------------------
     # Retrieve farm context
