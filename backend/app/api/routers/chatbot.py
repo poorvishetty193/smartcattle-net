@@ -216,7 +216,24 @@ def detect_intent(message: str) -> str:
 
         # Generic cow question
         return "cow"
+# ---------------------------------------------------------
+    # Milk drop
+    # ---------------------------------------------------------
 
+    if any(
+        phrase in text
+        for phrase in [
+             "milk drop",
+        "milk-drop",
+        "milk production drop",
+        "production drop",
+        "dropping milk",
+        "milk production is dropping",
+        "at risk of a milk production drop",
+        "risk of milk production drop",
+        ]
+    ):
+        return "milk_drop"
     # ---------------------------------------------------------
     # Farm-wide risk
     # ---------------------------------------------------------
@@ -251,21 +268,7 @@ def detect_intent(message: str) -> str:
     ):
         return "heat_stress"
 
-    # ---------------------------------------------------------
-    # Milk drop
-    # ---------------------------------------------------------
-
-    if any(
-        phrase in text
-        for phrase in [
-            "milk drop",
-            "milk-drop",
-            "milk production drop",
-            "production drop",
-            "dropping milk",
-        ]
-    ):
-        return "milk_drop"
+   
 
     # ---------------------------------------------------------
     # Health
