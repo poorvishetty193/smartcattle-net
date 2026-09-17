@@ -30,6 +30,7 @@ import re
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+from matplotlib import text
 from pydantic import BaseModel, Field
 
 from app.api.deps import CurrentUser, SessionDep
@@ -96,18 +97,18 @@ def detect_intent(message: str) -> str:
 
         # Cow risk
         if any(
-            phrase in text
-            for phrase in [
-                "risk level",
-                "risk score",
-                "risk status",
-                "how risky",
-                "is it risky",
-                "is the cow at risk",
-            ]
-        ):
-        
-            return "cow_risk"
+                    phrase in text
+                    for phrase in [
+                        "risk level",
+                        "risk score",
+                        "risk status",
+                        "how risky",
+                        "is it risky",
+                        "is the cow at risk",
+                    ]
+                ):
+                
+                    return "cow_risk"
         
         # Cow forecast
         if any(
@@ -124,20 +125,8 @@ def detect_intent(message: str) -> str:
     ]
 ):
             return "cow_forecast"
-        # Cow milk production
-        if any(
-            phrase in text
-            for phrase in [
-                "predicted milk",
-                "predicted yield",
-                "milk yield",
-                "daily yield",
-                "milk production",
-                "milk quantity",
-                "next milking",
-            ]
-        ):
-            return "cow_milk"
+           
+
 
         # Cow health
         if any(
@@ -166,15 +155,40 @@ def detect_intent(message: str) -> str:
 
         # Cow milk drop
         if any(
+                phrase in text
+                for phrase in [
+                    "milk drop",
+                    "milk-drop",
+                    "production drop",
+                    "dropping milk",
+                    "milk production drop",
+                    "milk production is dropping",
+                    "at risk of a milk production drop",
+                    "risk of milk production drop",
+                ]
+            ):
+                return "cow_milk_drop"
+# Cow milk production
+        if any(
             phrase in text
             for phrase in [
-                "milk drop",
-                "milk-drop",
-                "production drop",
-                "dropping milk",
+                "predicted milk",
+                "predicted yield",
+                "milk yield",
+                "daily yield",
+                "milk production",
+                "milk quantity",
+                "next milking",
+                "how much milk",
+                "how much does",
+                "how much is",
+                "producing",
+                "produce",
+                "gives",
+                "give",
             ]
         ):
-            return "cow_milk_drop"
+            return "cow_milk"            
 
         # Cow productivity
         if any(
