@@ -26,6 +26,7 @@ Later:
 
 from __future__ import annotations
 
+from email.mime import message
 import re
 from typing import Any
 
@@ -38,6 +39,8 @@ from app.services.chat_context import (
     build_cow_context,
     build_farm_context,
 )
+
+from app.rag.rag_service import build_knowledge_context
 
 
 router = APIRouter(
@@ -83,6 +86,14 @@ def detect_intent(message: str) -> str:
     """
 
     text = message.lower().strip()
+    # General knowledge questions
+    if any(phrase in message for phrase in [
+        "what is heat stress",
+        "what is heat stress in cattle",
+        "explain heat stress",
+        "what does heat stress mean",
+    ]):
+        return "general_knowledge"
 
     # ---------------------------------------------------------
     # Cow-specific questions
@@ -256,7 +267,7 @@ def detect_intent(message: str) -> str:
             ]
         ):
          return "milk_drop"
-
+                           
     # ---------------------------------------------------------
     # Farm-wide risk
     # ---------------------------------------------------------
@@ -1596,6 +1607,22 @@ async def chat(
         )
 
     intent = detect_intent(message)
+    # ---------------------------------------------------------
+# General knowledge / RAG
+# ---------------------------------------------------------
+
+    if intent == "general_knowledge":
+        knowledge_context = build_knowledge_context(message)
+
+        if knowledge_context:
+            return ChatResponse(
+                answer=knowledge_context,
+                source="SmartCattleNet cattle knowledge",
+                intent="general_knowledge",
+                data={
+                    "knowledge_context": knowledge_context,
+                },
+            )
 
     # ---------------------------------------------------------
     # Specific cow
@@ -1704,7 +1731,22 @@ async def chat(
     # ---------------------------------------------------------
     # General question
     # ---------------------------------------------------------
+        # ---------------------------------------------------------
+    # RAG knowledge question
+    # ---------------------------------------------------------
 
+    knowledge_context = build_knowledge_context(message)
+
+    if knowledge_context:
+        return ChatResponse(
+            answer=knowledge_context,
+            source="SmartCattleNet cattle knowledge",
+            intent="general",
+            data={
+                "knowledge_context": knowledge_context,
+            },
+        )
+        
     return ChatResponse(
         answer=(
             "I'm your SmartCattleNet farm assistant. "
