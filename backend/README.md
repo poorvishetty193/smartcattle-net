@@ -122,7 +122,6 @@ http://127.0.0.1:8000/openapi.json
 - Scikit-learn
 - XGBoost
 
-
  <!-- {
   "email": "Shetty@example.com",
   "password": "secure123!",

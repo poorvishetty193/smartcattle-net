@@ -149,6 +149,12 @@ def detect_intent(message: str) -> str:
                 "heat-stress",
                 "heat stressed",
                 "under heat stress",
+                "getting too hot",
+                "too hot",
+                "overheating",
+                "overheated",
+                "feeling hot",
+                "temperature stress",
             ]
         ):
             return "cow_heat_stress"
@@ -165,30 +171,22 @@ def detect_intent(message: str) -> str:
                     "milk production is dropping",
                     "at risk of a milk production drop",
                     "risk of milk production drop",
+                    "milk decrease",
+                    "milk decreases",
+                    "milk decrease?",
+                    "milk go down",
+                    "milk going down",
+                    "milk decline",
+                    "milk declining",
+                    "milk falling",
+                    "milk reduce",
+                    "milk reduction",
+                    "milk reducing",
+                                        
                 ]
             ):
                 return "cow_milk_drop"
-# Cow milk production
-        if any(
-            phrase in text
-            for phrase in [
-                "predicted milk",
-                "predicted yield",
-                "milk yield",
-                "daily yield",
-                "milk production",
-                "milk quantity",
-                "next milking",
-                "how much milk",
-                "how much does",
-                "how much is",
-                "producing",
-                "produce",
-                "gives",
-                "give",
-            ]
-        ):
-            return "cow_milk"            
+           
 
         # Cow productivity
         if any(
@@ -210,12 +208,54 @@ def detect_intent(message: str) -> str:
                 "future yield",
                 "next 7 days",
                 "next seven days",
-            ]
+                "stay stable",
+                "remain stable",
+                "over the next few days",
+                "next few days",
+                "will milk production",
+                "future milk production",
+                "milk production in the coming days",
+                "milk production over the next few days",
+                            ]
         ):
             return "cow_forecast"
 
-        # Generic cow question
-        return "cow"
+     # Cow milk production
+        if any(
+            phrase in text
+            for phrase in [
+                "predicted milk",
+                "predicted yield",
+                "milk yield",
+                "daily yield",
+                "milk production",
+                "milk quantity",
+                "next milking",
+                "how much milk",
+                "how much does",
+                "how much is",
+                "producing",
+                "produce",
+                "gives",
+                "give",
+            ]
+        ):
+            return "cow_milk"   
+    # ---------------------------------------------------------
+        # Milk drop
+        # ---------------------------------------------------------
+    
+    if any(
+            phrase in text
+            for phrase in [
+                "milk drop",
+                "milk-drop",
+                "milk production drop",
+                "production drop",
+                "dropping milk",
+            ]
+        ):
+         return "milk_drop"
 
     # ---------------------------------------------------------
     # Farm-wide risk
@@ -251,21 +291,7 @@ def detect_intent(message: str) -> str:
     ):
         return "heat_stress"
 
-    # ---------------------------------------------------------
-    # Milk drop
-    # ---------------------------------------------------------
-
-    if any(
-        phrase in text
-        for phrase in [
-            "milk drop",
-            "milk-drop",
-            "milk production drop",
-            "production drop",
-            "dropping milk",
-        ]
-    ):
-        return "milk_drop"
+    
 
     # ---------------------------------------------------------
     # Health
