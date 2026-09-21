@@ -87,7 +87,7 @@ def detect_intent(message: str) -> str:
 
     text = message.lower().strip()
     # General knowledge questions
-    if any(phrase in message for phrase in [
+    if any(phrase in text for phrase in [
         "what is heat stress",
         "what is heat stress in cattle",
         "explain heat stress",
