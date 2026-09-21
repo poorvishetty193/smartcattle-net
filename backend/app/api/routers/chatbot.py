@@ -25,7 +25,8 @@ Later:
 """
 
 from __future__ import annotations
-
+from app.rag.rag_service import build_knowledge_context
+from app.rag.llm_service import generate_answer
 from email.mime import message
 import re
 from typing import Any
@@ -87,7 +88,7 @@ def detect_intent(message: str) -> str:
 
     text = message.lower().strip()
     # General knowledge questions
-    if any(phrase in message for phrase in [
+    if any(phrase in text for phrase in [
         "what is heat stress",
         "what is heat stress in cattle",
         "explain heat stress",
@@ -1615,9 +1616,14 @@ async def chat(
         knowledge_context = build_knowledge_context(message)
 
         if knowledge_context:
+            answer = generate_answer(
+                question=message,
+                knowledge_context=knowledge_context,
+        )
+
             return ChatResponse(
-                answer=knowledge_context,
-                source="SmartCattleNet cattle knowledge",
+                answer=answer,
+                source="SmartCattleNet AI + cattle knowledge",
                 intent="general_knowledge",
                 data={
                     "knowledge_context": knowledge_context,
