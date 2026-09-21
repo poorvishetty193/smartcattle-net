@@ -194,6 +194,8 @@ def detect_intent(message: str) -> str:
                     "milk reduce",
                     "milk reduction",
                     "milk reducing",
+                    "milk production decreasing",
+                "milk production decrease",
                                         
                 ]
             ):
@@ -1284,13 +1286,13 @@ async def answer_cow_health(
     score = health.get("score")
 
     knowledge_context = build_knowledge_context(
-        "What does a cow health score mean?"
-    )
+    "What does a cow health score mean?"
+)
 
     answer = generate_answer(
         question=message,
         knowledge_context=(
-            f"Cow {cow_id} farm data:\n"
+            f"Farm data for cow {cow_id}:\n"
             f"Health score: {score}\n\n"
             f"Cattle knowledge:\n"
             f"{knowledge_context}"
@@ -1298,14 +1300,14 @@ async def answer_cow_health(
     )
 
     return ChatResponse(
-        answer=answer,
-        source="SmartCattleNet AI + farm data",
-        intent="cow_health",
-        data={
-            "cow_id": cow_id,
-            "health": health,
-        },
-    )
+    answer=answer,
+    source="SmartCattleNet AI + farm data",
+    intent="cow_health",
+    data={
+        "cow_id": cow_id,
+        "health": health,
+    },
+)
 async def answer_cow_heat_stress(
     message: str,
     db: SessionDep,
