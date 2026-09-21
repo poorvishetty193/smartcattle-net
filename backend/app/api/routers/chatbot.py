@@ -1286,17 +1286,38 @@ async def answer_cow_health(
     score = health.get("score")
 
     knowledge_context = build_knowledge_context(
+
     "What does a cow health score mean?"
 )
+
+        "What does a cow health score mean?"
+    )
+
 
     answer = generate_answer(
         question=message,
         knowledge_context=(
+
             f"Farm data for cow {cow_id}:\n"
+
+            f"Cow {cow_id} farm data:\n"
+
             f"Health score: {score}\n\n"
             f"Cattle knowledge:\n"
             f"{knowledge_context}"
         ),
+
+    )
+
+    return ChatResponse(
+        answer=answer,
+        source="SmartCattleNet AI + farm data",
+        intent="cow_health",
+        data={
+            "cow_id": cow_id,
+            "health": health,
+        },
+
     )
 
     return ChatResponse(
