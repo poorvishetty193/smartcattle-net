@@ -1286,28 +1286,28 @@ async def answer_cow_health(
     score = health.get("score")
 
     knowledge_context = build_knowledge_context(
-    "What does a cow health score mean?"
-)
+        "What does a cow health score mean?"
+    )
 
-    answer = generate_answer(
-        question=message,
-        knowledge_context=(
-            f"Farm data for cow {cow_id}:\n"
-            f"Health score: {score}\n\n"
-            f"Cattle knowledge:\n"
-            f"{knowledge_context}"
-        ),
+    answer = (
+        f"Cow {cow_id}'s current health score is {score:.4f}.\n\n"
+        "A health score is a numerical indicator used to represent "
+        "the overall health condition of a cow.\n\n"
+        "The available cattle knowledge does not provide a specific "
+        "threshold for classifying this score as good or bad, so the "
+        "score alone cannot be used to make that classification."
     )
 
     return ChatResponse(
-    answer=answer,
-    source="SmartCattleNet AI + farm data",
-    intent="cow_health",
-    data={
-        "cow_id": cow_id,
-        "health": health,
-    },
-)
+        answer=answer,
+        source="SmartCattleNet AI + farm data",
+        intent="cow_health",
+        data={
+            "cow_id": cow_id,
+            "health": health,
+            "knowledge_context": knowledge_context,
+        },
+    )
 async def answer_cow_heat_stress(
     message: str,
     db: SessionDep,
