@@ -55,16 +55,9 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed left-0 top-0 z-50 flex h-screen w-16 flex-col items-center border-r border-gray-200 bg-white py-5 shadow-sm">
-      {/* Logo */}
-      <div className="mb-8">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-600">
-          <span className="text-xl font-bold text-white">🌿</span>
-        </div>
-      </div>
-
+    <aside className="fixed left-0 top-[72px] z-30 flex h-[calc(100vh-72px)] w-16 flex-col border-r border-gray-200 bg-white shadow-sm">
       {/* Navigation */}
-      <nav className="flex flex-col gap-4">
+      <nav className="flex flex-1 flex-col items-center gap-4 overflow-y-auto py-5">
         {menuItems.map((item) => {
           const Icon = item.icon;
 
@@ -76,7 +69,7 @@ export default function Sidebar() {
               key={item.href}
               href={item.href}
               title={item.label}
-              className={`flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-200 ${
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all duration-200 ${
                 isActive
                   ? "bg-green-100 text-green-700"
                   : "text-gray-500 hover:bg-green-50 hover:text-green-700"
@@ -89,7 +82,7 @@ export default function Sidebar() {
       </nav>
 
       {/* Settings */}
-      <div className="mt-auto">
+      <div className="flex shrink-0 items-center justify-center border-t border-gray-100 py-5">
         <Link
           href="/settings"
           title="Settings"
