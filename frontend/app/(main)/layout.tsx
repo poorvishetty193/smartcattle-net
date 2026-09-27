@@ -4,14 +4,15 @@ import TopNavbar from "@/components/layout/TopNavbar";
 
 export default function MainLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#f5fbf5] flex">
+    <div className="min-h-screen bg-[#f5fbf5]">
+      {/* Topbar */}
+      <TopNavbar />
+
+      {/* Sidebar */}
       <Sidebar />
 
-      <div className="flex-1 ml-16 flex flex-col">
-        <TopNavbar />
-
-        <main className="flex-1 pt-[72px]">{children}</main>
-      </div>
+      {/* Main content */}
+      <main className="ml-16 min-h-[calc(100vh-72px)] pt-0">{children}</main>
     </div>
   );
 }
