@@ -9,10 +9,10 @@ Core inference router.
 
 Endpoints
 ---------
-- POST /predict        : Submit features and run inference.
-- GET  /predict/history: Get paginated prediction history.
-- GET  /predict/export : Export prediction history as CSV.
-- POST /predict/rerun  : Re-run the latest prediction for a cow.
+- POST /predict         : Submit features and run inference.
+- GET  /predict/history : Get paginated prediction history.
+- GET  /predict/export  : Export prediction history as CSV.
+- POST /predict/rerun   : Re-run the latest prediction for a cow.
 """
 
 import csv
@@ -58,32 +58,49 @@ async def create_prediction(
     """
     Execute the 12-stage CCP-Chain inference pipeline.
 
-    This endpoint fetches the cow's recent history to feed time-series
-    models before triggering the master pipeline.
+    The cow must belong to the logged-in farmer and must be active.
     """
 
-    # 1. Resolve Cow UUID if it exists
+    # -----------------------------------------------------------------------
+    # 1. Resolve and validate Cow UUID
+    # -----------------------------------------------------------------------
+
     cow_uuid = None
 
     if request_in.cow_id:
         stmt = select(Cow).where(
             Cow.owner_id == current_user.id,
             Cow.cow_id == request_in.cow_id,
+            Cow.is_active.is_(True),
         )
 
         result = await db.execute(stmt)
         cow_obj = result.scalar_one_or_none()
 
-        if cow_obj:
-            cow_uuid = cow_obj.id
+        if cow_obj is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(
+                    f"Cow '{request_in.cow_id}' was not found in "
+                    "your active registered herd."
+                ),
+            )
 
+        cow_uuid = cow_obj.id
+
+    # -----------------------------------------------------------------------
     # 2. Extract features into dictionary
+    # -----------------------------------------------------------------------
+
     features: Dict[str, Any] = {
         col: getattr(request_in, col, None)
         for col in BASE_FEATURE_COLS
     }
 
+    # -----------------------------------------------------------------------
     # 3. Fetch history for time-series stages
+    # -----------------------------------------------------------------------
+
     history_yields: List[float] = []
     history_records: List[Dict[str, Any]] = []
 
@@ -107,13 +124,19 @@ async def create_prediction(
 
         for rec in records:
 
+            # ---------------------------------------------------------------
             # Stage 6 history
+            # ---------------------------------------------------------------
+
             if rec.stage1_daily_yield is not None:
                 history_yields.append(
                     float(rec.stage1_daily_yield)
                 )
 
-            # Stage 3 history
+            # ---------------------------------------------------------------
+            # Historical feature record
+            # ---------------------------------------------------------------
+
             raw = rec.raw_response or {}
 
             hist_feat = {
@@ -131,18 +154,21 @@ async def create_prediction(
 
             history_records.append(hist_feat)
 
+    # -----------------------------------------------------------------------
     # 4. Run Master Pipeline
+    # -----------------------------------------------------------------------
+
     try:
         response = await PredictionPipeline.run_pipeline(
-    db=db,
-    user_id=current_user.id,
-    cow_label=request_in.cow_id or "UNKNOWN",
-    features=features,
-    history_yields=history_yields,
-    history_records=history_records,
-    cow_uuid=cow_uuid,
-    input_data=request_in.model_dump(),
-)
+            db=db,
+            user_id=current_user.id,
+            cow_label=request_in.cow_id or "UNKNOWN",
+            features=features,
+            history_yields=history_yields,
+            history_records=history_records,
+            cow_uuid=cow_uuid,
+            input_data=request_in.model_dump(),
+        )
 
         return response
 
@@ -169,15 +195,25 @@ async def create_prediction(
 async def get_prediction_history(
     db: SessionDep,
     current_user: CurrentUser,
-    cow_id: str = None,
+    cow_id: str | None = None,
     skip: int = 0,
     limit: int = 50,
 ) -> Any:
     """
-    Retrieve past predictions for the farm.
+    Retrieve prediction history for the logged-in farmer.
 
-    Optionally filter by a specific cow_id.
+    Only predictions belonging to the farmer's currently active
+    registered cows are returned.
+
+    If cow_id is supplied, only that active registered cow is returned.
+
+    The complete saved prediction response is returned, including
+    the Stage 6 7-day forecast.
     """
+
+    # -----------------------------------------------------------------------
+    # Build query
+    # -----------------------------------------------------------------------
 
     stmt = (
         select(PredictionRecord)
@@ -187,15 +223,24 @@ async def get_prediction_history(
         )
         .where(
             PredictionRecord.user_id == current_user.id,
-                Cow.owner_id == current_user.id,
+            Cow.owner_id == current_user.id,
             Cow.is_active.is_(True),
         )
     )
 
+    # -----------------------------------------------------------------------
+    # Optional cow filter
+    # -----------------------------------------------------------------------
+
     if cow_id:
         stmt = stmt.where(
             PredictionRecord.cow_label == cow_id
-    )   
+        )
+
+    # -----------------------------------------------------------------------
+    # Pagination
+    # -----------------------------------------------------------------------
+
     stmt = (
         stmt
         .order_by(desc(PredictionRecord.created_at))
@@ -206,11 +251,121 @@ async def get_prediction_history(
     result = await db.execute(stmt)
     records = result.scalars().all()
 
-    responses = [
-        rec.raw_response
-        for rec in records
-        if rec.raw_response
-    ]
+    # -----------------------------------------------------------------------
+    # Build normalized prediction responses
+    # -----------------------------------------------------------------------
+
+    responses: List[Dict[str, Any]] = []
+
+    for record in records:
+        raw = record.raw_response or {}
+
+        if not isinstance(raw, dict):
+            continue
+
+        # Make a copy so we never mutate the database object.
+        prediction: Dict[str, Any] = dict(raw)
+
+        # ---------------------------------------------------------------
+        # Guarantee cow_id
+        # ---------------------------------------------------------------
+
+        prediction["cow_id"] = record.cow_label
+
+        # ---------------------------------------------------------------
+        # Guarantee Stage 6 structure
+        # ---------------------------------------------------------------
+
+        stage6 = prediction.get("stage6_forecast")
+
+        if not isinstance(stage6, dict):
+            stage6 = {}
+
+        # ---------------------------------------------------------------
+        # If the raw prediction already contains the full 7-day forecast,
+        # preserve it exactly.
+        #
+        # Otherwise use the values stored directly in PredictionRecord.
+        # ---------------------------------------------------------------
+
+        forecast_7d = stage6.get("s6_forecast_7d")
+
+        if not isinstance(forecast_7d, list):
+            forecast_7d = []
+
+        forecast_7d_mean = stage6.get(
+            "s6_forecast_7d_mean"
+        )
+
+        if forecast_7d_mean is None:
+            forecast_7d_mean = record.stage6_forecast_mean
+
+        trend_slope = stage6.get(
+            "s6_trend_slope"
+        )
+
+        if trend_slope is None:
+            trend_slope = record.stage6_trend_slope
+
+        trend_direction = stage6.get(
+            "s6_trend_direction"
+        )
+
+        if trend_direction is None:
+            trend_direction = record.stage6_trend_dir
+
+        # ---------------------------------------------------------------
+        # Put normalized Stage 6 response back into prediction
+        # ---------------------------------------------------------------
+
+        prediction["stage6_forecast"] = {
+            "s6_forecast_7d": forecast_7d,
+            "s6_forecast_7d_mean": (
+                float(forecast_7d_mean)
+                if forecast_7d_mean is not None
+                else None
+            ),
+            "s6_trend_slope": (
+                float(trend_slope)
+                if trend_slope is not None
+                else None
+            ),
+            "s6_trend_direction": (
+                int(trend_direction)
+                if trend_direction is not None
+                else None
+            ),
+        }
+
+        # ---------------------------------------------------------------
+        # Guarantee important prediction fields
+        # ---------------------------------------------------------------
+
+        if (
+            prediction.get("stage1_daily_yield") is None
+            and record.stage1_daily_yield is not None
+        ):
+            prediction["stage1_daily_yield"] = float(
+                record.stage1_daily_yield
+            )
+
+        if (
+            prediction.get("stage11_health_score") is None
+            and record.stage11_health_score is not None
+        ):
+            prediction["stage11_health_score"] = float(
+                record.stage11_health_score
+            )
+
+        if (
+            prediction.get("stage12_risk_level") is None
+            and record.stage12_risk_level is not None
+        ):
+            prediction["stage12_risk_level"] = (
+                record.stage12_risk_level
+            )
+
+        responses.append(prediction)
 
     return responses
 
@@ -233,8 +388,14 @@ async def export_predictions_csv(
 
     stmt = (
         select(PredictionRecord)
+        .join(
+            Cow,
+            Cow.cow_id == PredictionRecord.cow_label,
+        )
         .where(
-            PredictionRecord.user_id == current_user.id
+            PredictionRecord.user_id == current_user.id,
+            Cow.owner_id == current_user.id,
+            Cow.is_active.is_(True),
         )
         .order_by(desc(PredictionRecord.created_at))
     )
@@ -264,19 +425,22 @@ async def export_predictions_csv(
         }
 
         # Add all values from the stored prediction response.
-        for key, value in raw.items():
-
-            if isinstance(value, (dict, list)):
-                row[key] = json.dumps(
-                    value,
-                    ensure_ascii=False,
-                )
-            else:
-                row[key] = value
+        if isinstance(raw, dict):
+            for key, value in raw.items():
+                if isinstance(value, (dict, list)):
+                    row[key] = json.dumps(
+                        value,
+                        ensure_ascii=False,
+                    )
+                else:
+                    row[key] = value
 
         rows.append(row)
 
-    # Collect every possible column.
+    # -----------------------------------------------------------------------
+    # Collect every possible column
+    # -----------------------------------------------------------------------
+
     fieldnames: List[str] = []
 
     for row in rows:
@@ -330,7 +494,32 @@ async def rerun_latest_prediction(
     PredictionRequest that was stored with the previous run.
     """
 
-    # 1. Find latest prediction for this user + cow.
+    # -----------------------------------------------------------------------
+    # 1. Verify that the cow belongs to the current user's active herd
+    # -----------------------------------------------------------------------
+
+    cow_stmt = select(Cow).where(
+        Cow.owner_id == current_user.id,
+        Cow.cow_id == cow_id,
+        Cow.is_active.is_(True),
+    )
+
+    cow_result = await db.execute(cow_stmt)
+    cow_obj = cow_result.scalar_one_or_none()
+
+    if cow_obj is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=(
+                f"Cow '{cow_id}' was not found in "
+                "your active registered herd."
+            ),
+        )
+
+    # -----------------------------------------------------------------------
+    # 2. Find latest prediction for this user + cow
+    # -----------------------------------------------------------------------
+
     stmt = (
         select(PredictionRecord)
         .where(
@@ -347,12 +536,22 @@ async def rerun_latest_prediction(
     if record is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No previous prediction found for cow '{cow_id}'.",
+            detail=(
+                f"No previous prediction found for cow '{cow_id}'."
+            ),
         )
 
-    # 2. Get the original request data stored by the pipeline.
+    # -----------------------------------------------------------------------
+    # 3. Get original request data stored by the pipeline
+    # -----------------------------------------------------------------------
+
     raw = record.raw_response or {}
-    stored_input = raw.get("input")
+
+    stored_input = (
+        raw.get("input")
+        if isinstance(raw, dict)
+        else None
+    )
 
     if not isinstance(stored_input, dict):
         raise HTTPException(
@@ -367,9 +566,13 @@ async def rerun_latest_prediction(
     # Always use the cow_id from the endpoint.
     stored_input["cow_id"] = cow_id
 
-    # 3. Validate the stored request.
+    # -----------------------------------------------------------------------
+    # 4. Validate the stored request
+    # -----------------------------------------------------------------------
+
     try:
         request_in = PredictionRequest(**stored_input)
+
     except Exception as exc:
         logger.exception(
             "Failed to reconstruct prediction request for cow: %s",
@@ -384,7 +587,10 @@ async def rerun_latest_prediction(
             ),
         )
 
-    # 4. Run the exact same prediction pipeline.
+    # -----------------------------------------------------------------------
+    # 5. Run the exact same prediction pipeline
+    # -----------------------------------------------------------------------
+
     return await create_prediction(
         db=db,
         current_user=current_user,

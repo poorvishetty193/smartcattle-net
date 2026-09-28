@@ -173,10 +173,20 @@ export default function CowProfilePage() {
         setLoadingCow(true);
         setError("");
 
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          throw new Error("Not authenticated");
+        }
+
         const response = await fetch(
           `${API_URL}/cows/${encodeURIComponent(cowId)}`,
           {
-            credentials: "include",
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
           },
         );
 
@@ -187,7 +197,7 @@ export default function CowProfilePage() {
         const data: Cow = await response.json();
         setCow(data);
       } catch (err) {
-        console.error(err);
+        console.error("Failed to load cow:", err);
         setError("Unable to load this cow.");
       } finally {
         setLoadingCow(false);
@@ -204,12 +214,22 @@ export default function CowProfilePage() {
       try {
         setLoadingPrediction(true);
 
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          throw new Error("Not authenticated");
+        }
+
         const response = await fetch(
           `${API_URL}/predict/history?cow_id=${encodeURIComponent(
             cowId,
           )}&skip=0&limit=1`,
           {
-            credentials: "include",
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
           },
         );
 
@@ -234,7 +254,7 @@ export default function CowProfilePage() {
 
         setPrediction(latest);
       } catch (err) {
-        console.error(err);
+        console.error("Failed to load prediction:", err);
         setPrediction(null);
       } finally {
         setLoadingPrediction(false);
