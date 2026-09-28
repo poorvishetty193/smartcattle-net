@@ -11,6 +11,9 @@ interface PredictionResponse {
   };
 
   stage12_risk_level?: string;
+
+  confidence?: number;
+  ai_confidence?: number;
 }
 
 interface StatsCardsProps {
@@ -30,9 +33,16 @@ export default function StatsCards({ prediction, loading }: StatsCardsProps) {
           ? "Stable"
           : "—";
 
-  const risk = prediction?.stage12_risk_level ?? "—";
+  const risk = prediction?.stage12_risk_level || "—";
 
   const forecastMean = stage6?.s6_forecast_7d_mean;
+
+  const confidence = prediction?.ai_confidence ?? prediction?.confidence;
+
+  const confidenceValue =
+    typeof confidence === "number" && Number.isFinite(confidence)
+      ? `${(confidence <= 1 ? confidence * 100 : confidence).toFixed(1)}%`
+      : "—";
 
   const stats = [
     {
@@ -43,10 +53,11 @@ export default function StatsCards({ prediction, loading }: StatsCardsProps) {
     },
     {
       title: "7-Day Forecast",
-      value:
-        loading || forecastMean === undefined
-          ? "—"
-          : `${forecastMean.toFixed(2)} kg/day`,
+      value: loading
+        ? "..."
+        : typeof forecastMean === "number" && Number.isFinite(forecastMean)
+          ? `${forecastMean.toFixed(2)} kg/day`
+          : "—",
       icon: Activity,
       color: "text-blue-600",
     },
@@ -58,7 +69,7 @@ export default function StatsCards({ prediction, loading }: StatsCardsProps) {
     },
     {
       title: "AI Confidence",
-      value: "—",
+      value: loading ? "..." : confidenceValue,
       icon: Brain,
       color: "text-purple-600",
     },

@@ -48,9 +48,13 @@ class PredictionResponse(BaseModel):
     cow_id: str
 
     stage1_daily_yield: Optional[float] = None
+
     stage2_drop_probability: Optional[float] = None
+
     stage3_next_milking: Optional[float] = None
+
     stage4_msi: Optional[float] = None
+
     stage5_quantity: Optional[float] = None
 
     stage6_forecast: Optional[Dict[str, Any]] = None
@@ -66,6 +70,11 @@ class PredictionResponse(BaseModel):
     stage11_health_score: Optional[float] = None
 
     stage12_risk_level: Optional[str] = None
+
+    # Original prediction input.
+    # Required by Scenario Simulator to create
+    # a new scenario without inventing cow measurements.
+    input: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True

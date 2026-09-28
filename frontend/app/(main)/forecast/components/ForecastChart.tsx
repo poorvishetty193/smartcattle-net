@@ -19,6 +19,7 @@ interface ForecastChartProps {
       s6_trend_direction?: number;
     };
   } | null;
+
   loading: boolean;
 }
 
@@ -33,10 +34,12 @@ export default function ForecastChart({
 }: ForecastChartProps) {
   const forecast = prediction?.stage6_forecast?.s6_forecast_7d ?? [];
 
-  const data: ChartData[] = forecast.map((value, index) => ({
-    day: `Day ${index + 1}`,
-    forecast: Number(value.toFixed(2)),
-  }));
+  const data: ChartData[] = forecast
+    .filter((value) => Number.isFinite(Number(value)))
+    .map((value, index) => ({
+      day: `Day ${index + 1}`,
+      forecast: Number(Number(value).toFixed(2)),
+    }));
 
   return (
     <div className="rounded-2xl border bg-white p-6 shadow-sm">
@@ -62,8 +65,15 @@ export default function ForecastChart({
           <p className="text-gray-500">Loading forecast...</p>
         </div>
       ) : data.length === 0 ? (
-        <div className="flex h-[420px] items-center justify-center">
-          <p className="text-gray-500">No forecast data available.</p>
+        <div className="flex h-[420px] flex-col items-center justify-center text-center">
+          <p className="font-medium text-gray-700">
+            No 7-day forecast data available.
+          </p>
+
+          <p className="mt-2 max-w-md text-sm text-gray-500">
+            This cow has prediction data, but the saved prediction does not
+            contain the individual 7-day forecast values.
+          </p>
         </div>
       ) : (
         <div className="h-[420px] w-full">

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
 import {
   LayoutDashboard,
   Users,
@@ -55,8 +56,8 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed left-0 top-[72px] z-30 flex h-[calc(100vh-72px)] w-16 flex-col border-r border-gray-200 bg-white shadow-sm">
-      {/* Navigation */}
+    <aside className="fixed left-0 top-[72px] z-40 flex h-[calc(100vh-72px)] w-16 flex-col border-r border-gray-200 bg-white shadow-sm">
+      {/* NAVIGATION */}
       <nav className="flex flex-1 flex-col items-center gap-4 overflow-y-auto py-5">
         {menuItems.map((item) => {
           const Icon = item.icon;
@@ -81,7 +82,7 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Settings */}
+      {/* SETTINGS */}
       <div className="flex shrink-0 items-center justify-center border-t border-gray-100 py-5">
         <Link
           href="/settings"
