@@ -34,24 +34,42 @@ interface AlertResponse {
   alerts: BackendAlert[];
 }
 
+interface Cow {
+  cow_id: string;
+  breed?: string;
+  parity?: number;
+  days_in_milk?: number;
+  is_active?: boolean;
+}
+
+interface CowsResponse {
+  cows?: Cow[];
+}
+
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  const [cows, setCows] = useState<Cow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showFilter, setShowFilter] = useState(false);
   const [filter, setFilter] = useState("All");
 
   useEffect(() => {
-    fetchAlerts();
+    loadData();
   }, []);
 
-  const fetchAlerts = async () => {
+  async function loadData() {
     try {
-      const data: AlertResponse = await apiGet("/alerts");
+      setLoading(true);
 
-      console.log("Alerts Response:", data);
+      const [alertsResponse, cowsResponse] = await Promise.all([
+        apiGet("/alerts"),
+        apiGet("/cows"),
+      ]);
 
-      const formattedAlerts: AlertItem[] = (data?.alerts || []).map(
+      const alertData = alertsResponse as AlertResponse;
+
+      const formattedAlerts: AlertItem[] = (alertData?.alerts || []).map(
         (alert, index) => ({
           id: index + 1,
           cow_id: alert.cow_id,
@@ -65,14 +83,22 @@ export default function AlertsPage() {
       );
 
       setAlerts(formattedAlerts);
+
+      const cowList: Cow[] = Array.isArray(cowsResponse)
+        ? cowsResponse
+        : ((cowsResponse as CowsResponse)?.cows ?? []);
+
+      setCows(cowList.filter((cow) => cow.is_active !== false));
     } catch (error) {
-      console.error("Alerts Error:", error);
+      console.error("Alerts page error:", error);
+      setAlerts([]);
+      setCows([]);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const formatSeverity = (severity: string) => {
+  function formatSeverity(severity: string) {
     const value = severity?.toLowerCase();
 
     if (value === "high" || value === "critical") {
@@ -84,9 +110,9 @@ export default function AlertsPage() {
     }
 
     return "Resolved";
-  };
+  }
 
-  const getSeverityColor = (severity: string) => {
+  function getSeverityColor(severity: string) {
     const value = severity?.toLowerCase();
 
     if (value === "high" || value === "critical") {
@@ -98,7 +124,7 @@ export default function AlertsPage() {
     }
 
     return "bg-green-100 text-green-700";
-  };
+  }
 
   const criticalCount = alerts.filter(
     (alert) => alert.severity === "Critical",
@@ -125,6 +151,24 @@ export default function AlertsPage() {
     });
   }, [alerts, search, filter]);
 
+  /*
+   * Current farmer's active cows.
+   * These are the only cows that can appear in Today's Tasks.
+   */
+  const activeCowIds = cows.map((cow) => cow.cow_id);
+
+  /*
+   * Use the first real alert as a real task instead of
+   * displaying fake C-007/C-011/C-015 data.
+   */
+  const firstCriticalAlert = alerts.find(
+    (alert) => alert.severity === "Critical",
+  );
+
+  const firstWarningAlert = alerts.find(
+    (alert) => alert.severity === "Warning",
+  );
+
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-100 p-6 pt-24">
@@ -137,7 +181,6 @@ export default function AlertsPage() {
 
   return (
     <main className="min-h-screen bg-gray-100 p-6 pt-24">
-      {" "}
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <Link
@@ -154,6 +197,7 @@ export default function AlertsPage() {
           <h1 className="text-3xl font-bold">Herd Alerts</h1>
         </div>
       </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {/* Critical */}
@@ -189,6 +233,7 @@ export default function AlertsPage() {
           </h2>
         </div>
       </div>
+
       {/* Search + Filter */}
       <div className="bg-white rounded-xl shadow-md p-5 mb-8">
         <div className="flex flex-col md:flex-row gap-4">
@@ -232,6 +277,7 @@ export default function AlertsPage() {
           </div>
         </div>
       </div>
+
       {/* Alerts List */}
       <div className="space-y-6">
         {filteredAlerts.length === 0 ? (
@@ -295,7 +341,8 @@ export default function AlertsPage() {
           ))
         )}
       </div>
-      {/* Calendar Dashboard */}
+
+      {/* Calendar Header */}
       <div className="mt-12">
         <div className="bg-white rounded-xl shadow-md p-6">
           <div className="flex flex-col md:flex-row justify-between items-center">
@@ -304,7 +351,7 @@ export default function AlertsPage() {
                 🐄 SmartCattleNet
               </h1>
 
-              <h2 className="text-3xl font-bold mt-6">July 2026</h2>
+              <h2 className="text-3xl font-bold mt-6">Farm Schedule</h2>
 
               <p className="text-gray-500 mt-1">
                 Precision Herd Management Schedule
@@ -323,110 +370,19 @@ export default function AlertsPage() {
           </div>
         </div>
       </div>
+
       {/* Calendar + Today's Tasks */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-8">
         {/* Calendar */}
         <div className="xl:col-span-2 bg-white rounded-xl shadow-md p-6">
-          <div className="grid grid-cols-7 text-center font-bold text-gray-600 border-b pb-3">
-            <div>SUN</div>
-            <div>MON</div>
-            <div>TUE</div>
-            <div>WED</div>
-            <div>THU</div>
-            <div>FRI</div>
-            <div>SAT</div>
-          </div>
+          <div className="text-center py-10">
+            <p className="text-gray-500 text-lg">
+              No scheduled farm events yet.
+            </p>
 
-          <div className="grid grid-cols-7">
-            {[
-              "",
-              "",
-              "",
-              1,
-              2,
-              3,
-              4,
-              5,
-              6,
-              7,
-              8,
-              9,
-              10,
-              11,
-              12,
-              13,
-              14,
-              15,
-              16,
-              17,
-              18,
-              19,
-              20,
-              21,
-              22,
-              23,
-              24,
-              25,
-              26,
-              27,
-              28,
-              29,
-              30,
-              31,
-              "",
-            ].map((day, index) => (
-              <div
-                key={index}
-                className="h-28 border border-gray-200 p-2 hover:bg-green-50"
-              >
-                {day !== "" && (
-                  <>
-                    <div className="font-semibold">{day}</div>
-
-                    <div className="flex gap-1 mt-2">
-                      {day === 3 && (
-                        <>
-                          <div className="w-2 h-2 rounded-full bg-red-500" />
-                          <div className="w-2 h-2 rounded-full bg-orange-500" />
-                        </>
-                      )}
-
-                      {day === 7 && (
-                        <div className="w-2 h-2 rounded-full bg-purple-500" />
-                      )}
-
-                      {day === 10 && (
-                        <div className="w-2 h-2 rounded-full bg-blue-500" />
-                      )}
-
-                      {day === 15 && (
-                        <div className="w-2 h-2 rounded-full bg-green-500" />
-                      )}
-
-                      {day === 17 && (
-                        <>
-                          <div className="w-2 h-2 rounded-full bg-green-500" />
-                          <div className="w-2 h-2 rounded-full bg-red-500" />
-                          <div className="w-2 h-2 rounded-full bg-orange-500" />
-                        </>
-                      )}
-
-                      {day === 20 && (
-                        <div className="w-2 h-2 rounded-full bg-purple-500" />
-                      )}
-
-                      {day === 23 && (
-                        <div className="w-2 h-2 rounded-full bg-green-500" />
-                      )}
-
-                      {day === 27 && (
-                        <div className="w-2 h-2 rounded-full bg-red-500" />
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
+            <p className="text-sm text-gray-400 mt-2">
+              Use “+ New Event” to add a real farm reminder.
+            </p>
           </div>
         </div>
 
@@ -434,35 +390,66 @@ export default function AlertsPage() {
         <div className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-2xl font-bold mb-6">Today's Tasks</h2>
 
+          {/* Real active herd task */}
           <div className="bg-green-50 border-l-4 border-green-600 rounded-lg p-4 mb-5">
             <h3 className="font-bold text-green-700">🥛 Morning Milking</h3>
 
             <p className="text-gray-600 mt-2">
-              Complete morning milking for all lactating cows.
+              Complete morning milking for {activeCowIds.length} active{" "}
+              {activeCowIds.length === 1 ? "cow" : "cows"}.
             </p>
+
+            {activeCowIds.length > 0 && (
+              <p className="text-sm text-gray-500 mt-2">
+                Herd: {activeCowIds.join(", ")}
+              </p>
+            )}
 
             <p className="text-sm text-gray-500 mt-2">6:00 AM – 8:00 AM</p>
           </div>
 
-          <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-4 mb-5">
-            <h3 className="font-bold text-yellow-700">💉 Vaccination</h3>
+          {/* Real warning task */}
+          {firstWarningAlert && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-4 mb-5">
+              <h3 className="font-bold text-yellow-700">
+                ⚠️ Attention Required
+              </h3>
 
-            <p className="text-gray-600 mt-2">
-              Vaccinate Cow C-007 and Cow C-011.
-            </p>
+              <p className="text-gray-600 mt-2">
+                Cow {firstWarningAlert.cow_id} has an active warning:{" "}
+                {firstWarningAlert.description}
+              </p>
 
-            <p className="text-sm text-gray-500 mt-2">10:30 AM</p>
-          </div>
+              <p className="text-sm text-gray-500 mt-2">Today</p>
+            </div>
+          )}
 
-          <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
-            <h3 className="font-bold text-red-700">🚑 Emergency Vet Check</h3>
+          {/* Real critical task */}
+          {firstCriticalAlert && (
+            <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
+              <h3 className="font-bold text-red-700">🚑 Immediate Attention</h3>
 
-            <p className="text-gray-600 mt-2">
-              High temperature detected in Cow C-015.
-            </p>
+              <p className="text-gray-600 mt-2">
+                Cow {firstCriticalAlert.cow_id}:{" "}
+                {firstCriticalAlert.description}
+              </p>
 
-            <p className="text-sm text-gray-500 mt-2">Immediate Attention</p>
-          </div>
+              <p className="text-sm text-gray-500 mt-2">Immediate Attention</p>
+            </div>
+          )}
+
+          {/* No alerts */}
+          {!firstWarningAlert && !firstCriticalAlert && (
+            <div className="bg-gray-50 border-l-4 border-gray-300 rounded-lg p-4">
+              <h3 className="font-bold text-gray-700">
+                ✅ No Additional Tasks
+              </h3>
+
+              <p className="text-gray-600 mt-2">
+                There are no active health or risk tasks for your herd.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </main>
