@@ -1,9 +1,10 @@
 """
 SmartCattle Net
+
 api/routers/alerts.py
 
 Alert endpoints derived from the latest prediction record
-for each cow.
+for each active cow belonging to the current farmer.
 """
 
 from typing import Any
@@ -12,7 +13,7 @@ from fastapi import APIRouter
 from sqlalchemy import desc, select
 
 from app.api.deps import CurrentUser, SessionDep
-from app.database.models import PredictionRecord
+from app.database.models import Cow, PredictionRecord
 from app.schemas.alerts import AlertItem, AlertResponse
 
 
@@ -29,7 +30,7 @@ async def get_alerts(
 ) -> Any:
     """
     Return active alerts generated from the latest prediction
-    of each cow.
+    of each active cow belonging to the current farmer.
     """
 
     stmt = (
@@ -40,8 +41,14 @@ async def get_alerts(
             PredictionRecord.stage12_risk_flag,
             PredictionRecord.stage12_risk_level,
         )
+        .join(
+            Cow,
+            Cow.cow_id == PredictionRecord.cow_label,
+        )
         .where(
             PredictionRecord.user_id == current_user.id,
+            Cow.owner_id == current_user.id,
+            Cow.is_active.is_(True),
             PredictionRecord.cow_label != "string",
             PredictionRecord.cow_label != "UNKNOWN",
         )
@@ -62,6 +69,7 @@ async def get_alerts(
         # -----------------------------------------
         # Stress alert
         # -----------------------------------------
+
         if row.stage8_stress_flag == 1:
             alerts.append(
                 AlertItem(
@@ -75,6 +83,7 @@ async def get_alerts(
         # -----------------------------------------
         # Health alert
         # -----------------------------------------
+
         if (row.stage11_health_score or 0) < 70:
             alerts.append(
                 AlertItem(
@@ -88,8 +97,8 @@ async def get_alerts(
         # -----------------------------------------
         # Risk alert
         # -----------------------------------------
-        if row.stage12_risk_level in ("medium", "high"):
 
+        if row.stage12_risk_level in ("medium", "high"):
             severity = (
                 "High"
                 if row.stage12_risk_level == "high"
@@ -114,7 +123,8 @@ async def get_alert_summary(
     current_user: CurrentUser,
 ) -> Any:
     """
-    Return summary statistics for the alert page.
+    Return summary statistics for the alert page
+    using only active cows belonging to the current farmer.
     """
 
     stmt = (
@@ -125,8 +135,14 @@ async def get_alert_summary(
             PredictionRecord.stage12_risk_flag,
             PredictionRecord.stage12_risk_level,
         )
+        .join(
+            Cow,
+            Cow.cow_id == PredictionRecord.cow_label,
+        )
         .where(
             PredictionRecord.user_id == current_user.id,
+            Cow.owner_id == current_user.id,
+            Cow.is_active.is_(True),
             PredictionRecord.cow_label != "string",
             PredictionRecord.cow_label != "UNKNOWN",
         )
@@ -152,6 +168,7 @@ async def get_alert_summary(
         # -----------------------------------------
         # Stress
         # -----------------------------------------
+
         if row.stage8_stress_flag == 1:
             total += 1
             high += 1
@@ -160,6 +177,7 @@ async def get_alert_summary(
         # -----------------------------------------
         # Health
         # -----------------------------------------
+
         if (row.stage11_health_score or 0) < 70:
             total += 1
             medium += 1
@@ -168,6 +186,7 @@ async def get_alert_summary(
         # -----------------------------------------
         # Risk
         # -----------------------------------------
+
         if row.stage12_risk_level in ("medium", "high"):
             total += 1
             risk += 1

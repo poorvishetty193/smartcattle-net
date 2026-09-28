@@ -1,17 +1,31 @@
 "use client";
 
-import { useState } from "react";
-import { apiPost } from "@/lib/api";
+import { useEffect, useState } from "react";
+import { apiGet, apiPost } from "@/lib/api";
 
 interface PredictionFormProps {
   setResult: (data: any) => void;
 }
 
+interface Cow {
+  cow_id: string;
+  breed?: string;
+  parity?: number;
+  days_in_milk?: number;
+  is_active?: boolean;
+}
+
+interface CowsResponse {
+  cows?: Cow[];
+}
+
 export default function PredictionForm({ setResult }: PredictionFormProps) {
   const [loading, setLoading] = useState(false);
+  const [cows, setCows] = useState<Cow[]>([]);
+  const [loadingCows, setLoadingCows] = useState(true);
 
   const [formData, setFormData] = useState({
-    cow_id: "C04",
+    cow_id: "",
     lactation_number: 2,
     days_in_milk: 120,
     parity: 2,
@@ -33,7 +47,54 @@ export default function PredictionForm({ setResult }: PredictionFormProps) {
     rumination: 510,
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ---------------------------------------------------------
+  // LOAD CURRENT USER'S ACTIVE COWS
+  // ---------------------------------------------------------
+
+  useEffect(() => {
+    loadCows();
+  }, []);
+
+  async function loadCows() {
+    try {
+      setLoadingCows(true);
+
+      const response = await apiGet("/cows");
+
+      const cowList: Cow[] = Array.isArray(response)
+        ? response
+        : ((response as CowsResponse)?.cows ?? []);
+
+      const activeCows = cowList.filter((cow) => cow.is_active !== false);
+
+      setCows(activeCows);
+
+      // Automatically select the first registered cow
+      if (activeCows.length > 0) {
+        const firstCow = activeCows[0];
+
+        setFormData((prev) => ({
+          ...prev,
+          cow_id: firstCow.cow_id,
+          parity: firstCow.parity ?? prev.parity,
+          days_in_milk: firstCow.days_in_milk ?? prev.days_in_milk,
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to load cows:", error);
+      setCows([]);
+    } finally {
+      setLoadingCows(false);
+    }
+  }
+
+  // ---------------------------------------------------------
+  // HANDLE INPUT CHANGES
+  // ---------------------------------------------------------
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const { name, value } = e.target;
 
     setFormData((prev) => ({
@@ -42,7 +103,16 @@ export default function PredictionForm({ setResult }: PredictionFormProps) {
     }));
   };
 
+  // ---------------------------------------------------------
+  // PREDICT
+  // ---------------------------------------------------------
+
   async function handlePredict() {
+    if (!formData.cow_id) {
+      alert("Please select a cow first.");
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -53,13 +123,17 @@ export default function PredictionForm({ setResult }: PredictionFormProps) {
       setResult(data);
     } catch (error) {
       console.error("Prediction Error:", error);
+      alert("Prediction failed. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
+  // ---------------------------------------------------------
+  // FORM FIELDS
+  // ---------------------------------------------------------
+
   const fields = [
-    ["cow_id", "Cow ID"],
     ["lactation_number", "Lactation Number"],
     ["days_in_milk", "Days in Milk"],
     ["parity", "Parity"],
@@ -81,6 +155,10 @@ export default function PredictionForm({ setResult }: PredictionFormProps) {
     ["rumination", "Rumination"],
   ] as const;
 
+  // ---------------------------------------------------------
+  // UI
+  // ---------------------------------------------------------
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
       <h2 className="text-xl font-bold text-gray-800 mb-6">
@@ -88,6 +166,37 @@ export default function PredictionForm({ setResult }: PredictionFormProps) {
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {/* COW SELECTOR */}
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Cow ID
+          </label>
+
+          <select
+            name="cow_id"
+            value={formData.cow_id}
+            onChange={handleChange}
+            disabled={loadingCows || cows.length === 0}
+            className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-green-600 focus:ring-2 focus:ring-green-100 bg-white"
+          >
+            {loadingCows ? (
+              <option value="">Loading cows...</option>
+            ) : cows.length === 0 ? (
+              <option value="">No registered cows</option>
+            ) : (
+              cows.map((cow) => (
+                <option key={cow.cow_id} value={cow.cow_id}>
+                  {cow.cow_id}
+                  {cow.breed ? ` - ${cow.breed}` : ""}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+
+        {/* OTHER FIELDS */}
+
         {fields.map(([name, label]) => (
           <div key={name}>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -95,7 +204,7 @@ export default function PredictionForm({ setResult }: PredictionFormProps) {
             </label>
 
             <input
-              type={name === "cow_id" ? "text" : "number"}
+              type="number"
               name={name}
               value={formData[name]}
               onChange={handleChange}
@@ -106,10 +215,14 @@ export default function PredictionForm({ setResult }: PredictionFormProps) {
         ))}
       </div>
 
+      {/* PREDICT BUTTON */}
+
       <div className="mt-7 flex justify-end">
         <button
           onClick={handlePredict}
-          disabled={loading}
+          disabled={
+            loading || loadingCows || cows.length === 0 || !formData.cow_id
+          }
           className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold px-8 py-3 rounded-lg transition"
         >
           {loading ? "Predicting..." : "Predict"}
