@@ -1,9 +1,7 @@
-"""
-SmartCattle Net
-services/dashboard_service.py
+# SmartCattle Net
+# services/dashboard_service.py
 
-Purpose
--------
+"""
 Business logic for Dashboard APIs.
 """
 
@@ -11,7 +9,8 @@ from datetime import datetime
 
 from sqlalchemy import func, select
 
-from app.database.models import PredictionRecord
+from app.database.models import PredictionRecord, Cow
+
 from app.schemas.dashboard import (
     OverviewResponse,
     StatisticsResponse,
@@ -56,7 +55,7 @@ class DashboardService:
     # ---------------------------------------------------------
     # STATISTICS
     # ---------------------------------------------------------
-        
+
     @staticmethod
     async def get_dashboard_statistics(
         db,
@@ -64,7 +63,8 @@ class DashboardService:
     ) -> StatisticsResponse:
         """
         Returns dashboard statistics using only
-        the latest prediction for each cow.
+        the latest prediction for each ACTIVE
+        registered cow of the current farmer.
         """
 
         latest_predictions = (
@@ -82,7 +82,13 @@ class DashboardService:
                 )
                 .label("row_num"),
             )
+            .join(
+                Cow,
+                Cow.cow_id == PredictionRecord.cow_label,
+            )
             .where(
+                Cow.owner_id == current_user.id,
+                Cow.is_active.is_(True),
                 PredictionRecord.user_id == current_user.id,
                 PredictionRecord.cow_label != "string",
                 PredictionRecord.cow_label != "UNKNOWN",
@@ -130,6 +136,7 @@ class DashboardService:
             ),
             stress_alerts=stress_alerts or 0,
         )
+
     # ---------------------------------------------------------
     # PRODUCTIVITY HEATMAP
     # ---------------------------------------------------------
@@ -140,7 +147,8 @@ class DashboardService:
         current_user,
     ) -> HeatmapResponse:
         """
-        Returns the latest productivity score for each cow.
+        Returns the latest productivity score
+        only for ACTIVE registered cows.
         """
 
         stmt = (
@@ -148,7 +156,13 @@ class DashboardService:
                 PredictionRecord.cow_label,
                 PredictionRecord.stage7_productivity,
             )
+            .join(
+                Cow,
+                Cow.cow_id == PredictionRecord.cow_label,
+            )
             .where(
+                Cow.owner_id == current_user.id,
+                Cow.is_active.is_(True),
                 PredictionRecord.user_id == current_user.id,
                 PredictionRecord.cow_label != "string",
                 PredictionRecord.cow_label != "UNKNOWN",
@@ -161,7 +175,6 @@ class DashboardService:
         )
 
         result = await db.execute(stmt)
-
         rows = result.all()
 
         heatmap = [
@@ -189,7 +202,8 @@ class DashboardService:
         current_user,
     ) -> FarmDecisionResponse:
         """
-        Returns the latest farm recommendation for each cow.
+        Returns the latest farm recommendation
+        only for ACTIVE registered cows.
         """
 
         stmt = (
@@ -197,7 +211,13 @@ class DashboardService:
                 PredictionRecord.cow_label,
                 PredictionRecord.stage9_decision,
             )
+            .join(
+                Cow,
+                Cow.cow_id == PredictionRecord.cow_label,
+            )
             .where(
+                Cow.owner_id == current_user.id,
+                Cow.is_active.is_(True),
                 PredictionRecord.user_id == current_user.id,
                 PredictionRecord.cow_label != "string",
                 PredictionRecord.cow_label != "UNKNOWN",
@@ -210,7 +230,6 @@ class DashboardService:
         )
 
         result = await db.execute(stmt)
-
         rows = result.all()
 
         decisions = [
@@ -231,9 +250,6 @@ class DashboardService:
     # ---------------------------------------------------------
     # PRIORITY RANKING
     # ---------------------------------------------------------
-        # ---------------------------------------------------------
-    # PRIORITY RANKING
-    # ---------------------------------------------------------
 
     @staticmethod
     async def get_priority_ranking(
@@ -241,9 +257,8 @@ class DashboardService:
         current_user,
     ) -> PriorityRankingResponse:
         """
-        Returns priority ranking for all cows.
-
-        Highest priority score gets rank #1.
+        Returns priority ranking only for
+        ACTIVE registered cows.
         """
 
         stmt = (
@@ -252,7 +267,13 @@ class DashboardService:
                 PredictionRecord.stage10_priority_score,
                 PredictionRecord.created_at,
             )
+            .join(
+                Cow,
+                Cow.cow_id == PredictionRecord.cow_label,
+            )
             .where(
+                Cow.owner_id == current_user.id,
+                Cow.is_active.is_(True),
                 PredictionRecord.user_id == current_user.id,
                 PredictionRecord.cow_label != "string",
                 PredictionRecord.cow_label != "UNKNOWN",
@@ -284,12 +305,17 @@ class DashboardService:
 
         rankings = []
 
-        for rank, row in enumerate(sorted_rows, start=1):
+        for rank, row in enumerate(
+            sorted_rows,
+            start=1,
+        ):
             rankings.append(
                 PriorityRankingItem(
                     cow_id=row.cow_label,
                     priority_score=round(
-                        float(row.stage10_priority_score or 0),
+                        float(
+                            row.stage10_priority_score or 0
+                        ),
                         2,
                     ),
                     priority_rank=rank,
@@ -299,7 +325,7 @@ class DashboardService:
         return PriorityRankingResponse(
             rankings=rankings
         )
-    
+
     # ---------------------------------------------------------
     # HEALTH + RISK
     # ---------------------------------------------------------
@@ -310,7 +336,8 @@ class DashboardService:
         current_user,
     ) -> HealthRiskResponse:
         """
-        Returns health and risk summary for each cow.
+        Returns health and risk summary only
+        for ACTIVE registered cows.
         """
 
         stmt = (
@@ -321,7 +348,13 @@ class DashboardService:
                 PredictionRecord.stage12_risk_level,
                 PredictionRecord.stage12_risk_flag,
             )
+            .join(
+                Cow,
+                Cow.cow_id == PredictionRecord.cow_label,
+            )
             .where(
+                Cow.owner_id == current_user.id,
+                Cow.is_active.is_(True),
                 PredictionRecord.user_id == current_user.id,
                 PredictionRecord.cow_label != "string",
                 PredictionRecord.cow_label != "UNKNOWN",
@@ -334,18 +367,21 @@ class DashboardService:
         )
 
         result = await db.execute(stmt)
-
         rows = result.all()
 
         cows = [
             HealthRiskItem(
                 cow_id=row.cow_label,
                 health_score=round(
-                    float(row.stage11_health_score or 0),
+                    float(
+                        row.stage11_health_score or 0
+                    ),
                     2,
                 ),
                 risk_score=round(
-                    float(row.stage12_risk_score or 0),
+                    float(
+                        row.stage12_risk_score or 0
+                    ),
                     2,
                 ),
                 risk_level=(
@@ -371,7 +407,8 @@ class DashboardService:
         current_user,
     ) -> MilkYieldTrendResponse:
         """
-        Returns the latest milk yield prediction for each cow.
+        Returns the latest milk yield prediction
+        only for ACTIVE registered cows.
         """
 
         stmt = (
@@ -379,7 +416,13 @@ class DashboardService:
                 PredictionRecord.cow_label,
                 PredictionRecord.stage1_daily_yield,
             )
+            .join(
+                Cow,
+                Cow.cow_id == PredictionRecord.cow_label,
+            )
             .where(
+                Cow.owner_id == current_user.id,
+                Cow.is_active.is_(True),
                 PredictionRecord.user_id == current_user.id,
                 PredictionRecord.cow_label != "string",
                 PredictionRecord.cow_label != "UNKNOWN",
@@ -392,14 +435,15 @@ class DashboardService:
         )
 
         result = await db.execute(stmt)
-
         rows = result.all()
 
         trends = [
             MilkYieldTrendItem(
                 cow_id=row.cow_label,
                 daily_yield=round(
-                    float(row.stage1_daily_yield or 0),
+                    float(
+                        row.stage1_daily_yield or 0
+                    ),
                     2,
                 ),
             )
@@ -421,7 +465,7 @@ class DashboardService:
     ) -> AlertResponse:
         """
         Returns alerts based on the latest prediction
-        for each cow.
+        only for ACTIVE registered cows.
         """
 
         stmt = (
@@ -432,7 +476,13 @@ class DashboardService:
                 PredictionRecord.stage12_risk_flag,
                 PredictionRecord.stage12_risk_level,
             )
+            .join(
+                Cow,
+                Cow.cow_id == PredictionRecord.cow_label,
+            )
             .where(
+                Cow.owner_id == current_user.id,
+                Cow.is_active.is_(True),
                 PredictionRecord.user_id == current_user.id,
                 PredictionRecord.cow_label != "string",
                 PredictionRecord.cow_label != "UNKNOWN",
@@ -445,7 +495,6 @@ class DashboardService:
         )
 
         result = await db.execute(stmt)
-
         rows = result.all()
 
         alerts = []

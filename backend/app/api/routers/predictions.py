@@ -179,15 +179,23 @@ async def get_prediction_history(
     Optionally filter by a specific cow_id.
     """
 
-    stmt = select(PredictionRecord).where(
-        PredictionRecord.user_id == current_user.id
+    stmt = (
+        select(PredictionRecord)
+        .join(
+            Cow,
+            Cow.cow_id == PredictionRecord.cow_label,
+        )
+        .where(
+            PredictionRecord.user_id == current_user.id,
+                Cow.owner_id == current_user.id,
+            Cow.is_active.is_(True),
+        )
     )
 
     if cow_id:
         stmt = stmt.where(
             PredictionRecord.cow_label == cow_id
-        )
-
+    )   
     stmt = (
         stmt
         .order_by(desc(PredictionRecord.created_at))
